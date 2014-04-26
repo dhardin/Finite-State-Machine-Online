@@ -1,0 +1,37 @@
+<!doctype html>
+<html>
+<head>
+    <!-- ie9+ rendering support for latest standards -->
+    <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>FSM Online</title>
+    <!-- third-party stylesheets -->
+    <link rel="stylesheet" href="css/bootstrap/bootstrap.css" />
+    <!-- our stylesheets -->
+    <link rel="stylesheet" href="css/fsm.css" type="text/css" />
+    <link rel="stylesheet" href="css/fsm.shell.css" type="text/css" />
+    <link rel="stylesheet" href="css/fsm.graph.css" type="text/css" />
+    <!-- third-party javascript -->
+    <script type="text/javascript" src="js/jq/jquery-1.10.2.js"></script>
+    <script type="text/javascript" src="socket.io/socket.io.js"></script>
+    <script type="text/javascript" src="js/jq/jquery.event.gevent.js"></script>
+    <script type="text/javascript" src="js/jq/bootstrap.min.js"></script>
+    <script type="text/javascript" src="js/jq/taffy.js"></script>
+    <!-- our javascript -->
+    <script type="text/javascript" src="js/fsm.js"></script>
+    <script type="text/javascript" src="js/fsm.shell.js"></script>
+    <script type="text/javascript" src="js/fsm.menu.js"></script>
+    <!--<script type="text/javascript" src="js/fsm.data.js"></script>-->
+    <script type="text/javascript" src="js/fsm.graph.js"></script>
+    <script type="text/javascript" src="js/fsm.model.js"></script>
+    <script type="text/javascript" src="js/fsm.fake.js"></script>
+    <script type="text/javascript" src="js/fsm.data.js"></script>
+
+    <script>
+        $(function () { fsm.initModule($('#fsm')); });
+    </script>
+</head>
+<body>
+    <div id="fsm"></div>
+</body>
+</html>
