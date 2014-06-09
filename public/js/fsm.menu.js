@@ -1,6 +1,6 @@
 /*
-* fsm.shell.js
-* Shell module for fsm
+* fsm.menu.js
+* Menu module for fsm
 */
 /*jslint browser : true, continue : true,
 devel : true, indent : 2, maxerr : 50,
@@ -225,7 +225,9 @@ fsm.menu = (function () {
         return bool_return;
     };
     // End DOM method /changeAnchorPart/
+
     //--------------------- END DOM METHODS ----------------------
+
     //------------------- BEGIN EVENT HANDLERS -------------------
     // Begin Event Handler /onSignInClick/
     onSignInClick = function (e) {
@@ -240,12 +242,14 @@ fsm.menu = (function () {
                 .html('invalid login')
                 .removeClass('btn-primary')
                 .addClass('btn-danger');
+
             setTimeout(function () {
                 $("#sign-in-user-btn")
                     .html('Sign In')
                 .removeClass('btn-danger')
                 .addClass('btn-primary');
             }, 2000);
+
         } else {
             $(this).text(update_map.user.name);
             jqueryMap.$signIn.hide();
@@ -285,7 +289,7 @@ fsm.menu = (function () {
 
         $('<a href="#" class="list-group-item active">Graphs</a>'
             + '<a href="#" class="graph-list-item list-group-item">'
-                + '<span class="glyphicon glyphicon-refresh spinner"></span><span style="padding-left: 5px;">Getting graphs...</span>'
+                + '<span class="glyphicon glyphicon-refresh spinner"></span><span style="padding-left: 5px;">Fetching graphs...</span>'
             + '</a>').appendTo($graphList);
     };
     // End Event Handler /onLoadClick/
@@ -339,8 +343,8 @@ fsm.menu = (function () {
         stateMap.$container = $container;
         $container.html(configMap.main_html);
         setJqueryMap();
-
-
+        
+        // initialize event handling
         jqueryMap.$new.on('click', onNewClick);
         jqueryMap.$print.on('click', onPrintClick);
         jqueryMap.$load.on('click', onLoadClick);
@@ -391,19 +395,23 @@ fsm.menu = (function () {
         });
 
         $(document).on('click', '.graph-list-item', function (e) {
+            $(this).parent().find('.load-active-item').removeClass('load-active-item');
             $(this).addClass('load-active-item');
             stateMap.loadGraph = $(this).data('graph');
         });
+
         $(document).on('hidden.bs.modal', "#sign-in-modal", function (e) {
             $('#sign-in-modal').remove();
             $('body').removeClass('modal-open');
             $('.modal-backdrop').remove();
         });
+
         $(document).on('hidden.bs.modal', '#load-modal', function (e) {
             $('#load-modal').remove();
             $('body').removeClass('modal-open');
             $('.modal-backdrop').remove();
         });
+
         $(document).on('hidden.bs.modal', "#save-modal", function (e) {
             $('#save-modal').remove();
             $('body').removeClass('modal-open');
@@ -412,6 +420,8 @@ fsm.menu = (function () {
 
     };
     // End PUBLIC method /initModule/
-    return { initModule: initModule };
+    return {
+        initModule: initModule
+    };
     //------------------- END PUBLIC METHODS ---------------------
 }());

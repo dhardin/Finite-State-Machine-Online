@@ -1,6 +1,6 @@
 /*
  * fsm.js
- * Root namefsmce module
+ * Root nameespace module
 */
 
 /*jslint          browser : true,     continue : true,
@@ -14,7 +14,6 @@
 var fsm = (function () {
     var initModule = function ($container) {
         fsm.model.initModule();
-        //fsm.data.initModule();
         fsm.shell.initModule($container);
     };
     return { initModule: initModule };

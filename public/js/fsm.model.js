@@ -8,7 +8,7 @@ newcap : true, nomen : true, plusplus : true,
 regexp : true, sloppy : true, vars : false,
 white : true
 */
-/*global TAFFY, $, fsm */
+/*global, $, fsm */
 fsm.model = (function () {
     'use strict';
     var
@@ -21,7 +21,7 @@ fsm.model = (function () {
         people_cid_map: {},
         graphs_cid_map: {},
         people_db: TAFFY(),
-        graph_db: []//TAFFY()
+        graph_db: []
     },
 isFakeData = false,
 personProto, makePerson, removePerson,people,
@@ -65,13 +65,6 @@ makeCid, clearGraphDb, completeLogin, completeSave, updateGraphDb, updateUser, i
     };
 
     completeSave = function (graph) {
-        //var graph_map = graph,
-        //    graph_list, graph_map, i;
-       // delete stateMap.graphs_cid_map[graph_map.cid];
-    //    stateMap.graph.cid = graph_map._id;
-        //stateMap.graph.id = graph_map._id;
-        //stateMap.graph =
-       // stateMap.graphs_cid_map[graph_map._id] = stateMap.graph;
         $.gevent.publish('fsm-graph-saved', {});
     };
 
@@ -85,21 +78,13 @@ makeCid, clearGraphDb, completeLogin, completeSave, updateGraphDb, updateUser, i
 
     makePerson = function ( person_map ) {
         var person,
-       // cid = person_map.cid,
         password = person_map.password,
         id = person_map.id,
         name = person_map.name;
-     //   graphs = person_map.graphs || [];
-        //if ( cid === undefined || ! name ) {
-        //    throw 'client id and name required';
-        //}
         person = Object.create( personProto );
-        //person.cid = cid;
         person.name = name;
         person.password = password;
-    //    person.graphs = graphs;
         if ( id ) { person.id = id; }
-       // stateMap.people_cid_map[ cid ] = person;
         stateMap.people_db.insert( person );
         return person;
     };
@@ -114,11 +99,15 @@ makeCid, clearGraphDb, completeLogin, completeSave, updateGraphDb, updateUser, i
     };
     people = (function () {
         var get_by_cid, get_db, get_user, login, logout, graph_list, graph_map;
+
         get_by_cid = function ( cid ) {
             return stateMap.people_cid_map[ cid ];
         };
+
         get_db = function () { return stateMap.people_db; };
+
         get_user = function () { return stateMap.user; };
+
         login = function (name, password) {
             if (!name || !password) {
                 completeLogin(false);
@@ -131,15 +120,17 @@ makeCid, clearGraphDb, completeLogin, completeSave, updateGraphDb, updateUser, i
                 name : name,
                 password: password
             });
-        };        
+        };
+
         logout = function () {
             var is_removed, user = stateMap.user;
-            // when we add chat, we should leave the chatroom here
+
             is_removed = removePerson( user );
             stateMap.user = stateMap.anon_user;
             $.gevent.publish( 'fsm-logout', { user: user } );
             return is_removed;
         };
+
         return {
             get_by_cid: get_by_cid,
             get_db: get_db,
@@ -155,10 +146,11 @@ makeCid, clearGraphDb, completeLogin, completeSave, updateGraphDb, updateUser, i
             return this.cid === stateMap.graph.cid;
         }
     };
+
     clearGraphDb = function () {
-        stateMap.graph_db = [];//TAFFY();
-     //   stateMap.graphs_cid_map = {};
+        stateMap.graph_db = [];
     };
+
     makeGraph = function (graph_map) {
         var graph,
         user_id= graph_map.user_id,
@@ -167,41 +159,41 @@ makeCid, clearGraphDb, completeLogin, completeSave, updateGraphDb, updateUser, i
         created = graph_map.created,
         modified = graph_map.modified,
         states = graph_map.states;
-        //if (cid === undefined || !name) {
-        //    throw 'graph id and name required';
-        //}
+
         graph = Object.create(graphProto);
         graph.user_id = user_id;
         graph.name = name;
         graph.created = created;
         graph.modified = modified;
         graph.states = states;
-        if (id) { graph.id = id; }
-        //stateMap.graphs_cid_map[cid] = graph;
+
+        if (id) {
+            graph.id = id;
+        }
+
         stateMap.graph_db.push(graph);
+
         return graph;
     };
 
     graphs = (function () {
         var get_by_cid, get_db, get_graph, get_graphs, graph_list, graph_map, save;
+
          get_by_cid = function ( cid ) {
              return stateMap.graphs_cid_map[cid];
          };
-         get_db = function () { return stateMap.graphs_db; };
-         get_graph = function () { return stateMap.graph; };
+
+         get_db = function () {
+             return stateMap.graphs_db;
+         };
+
+         get_graph = function () {
+             return stateMap.graph;
+         };
+
          
          get_graphs = function (user_map) {
-             //var i, graphIdObjArr = [];
-             //if (!(graphIdArr instanceof Array)) {
-             //    return false;
-             //}
              var sio = isFakeData ? fsm.fake.mockSio : fsm.data.getSio();
-
-             //for (i = 0; i < graphIdArr.length; i++ ){
-             //    graphIdObjArr.push({
-             //        id: graphIdArr[i]
-             //    });
-             //}
 
              sio.on('graphreceived', updateGraphDb);
              sio.emit('getgraph', { user_id: user_map.id });
@@ -212,8 +204,9 @@ makeCid, clearGraphDb, completeLogin, completeSave, updateGraphDb, updateUser, i
                  stateMap.graph.id = id;
              }
 
-             var statesArr = [], state = {}, i, j;
-             var sio = isFakeData ? fsm.fake.mockSio : fsm.data.getSio();
+             var statesArr = [], state = {}, i, j,
+                 sio = isFakeData ? fsm.fake.mockSio : fsm.data.getSio();
+
              for (i = 0; i < states.length; i++) {
                  state = {};
                  state.x = states[i].x;
@@ -240,8 +233,6 @@ makeCid, clearGraphDb, completeLogin, completeSave, updateGraphDb, updateUser, i
              }
 
              //make our graph object
-             // when we add chat, we should leave the chatroom here
-             //sio.on('userupdate', completeLogin);
              sio.on('graphupdate', completeSave);
             
              if (isNewGraph) {
@@ -310,6 +301,7 @@ makeCid, clearGraphDb, completeLogin, completeSave, updateGraphDb, updateUser, i
             stateMap.graph.name = update_map.name;
         });
     };
+
     return {
         initModule: initModule,
         people: people,

@@ -1,4 +1,4 @@
-/*
+﻿/*
 * fsm.graph.js
 * Graph module for fsm
 */
@@ -60,7 +60,7 @@ fsm.graph = (function() {
             graph: null
         },
         jqueryMap = {},
-        patternMap = { 
+        patternMap = {
             lambda: /(\/lambda)/gi,
             epsilon: /(\/epsilon)/gi,
             delta: /(\/delta)/gi
@@ -70,68 +70,17 @@ fsm.graph = (function() {
             epsilon: '&epsilon;',
             delta: '&delta;'
         },
-        canvas,
-        context,
-        loc,
-        cursor,
-        line,
-        fontHeight,
-        // Private Methods
-        copyAnchorMap,
-        setJqueryMap,
-        changeAnchorPart,
-        drawCircle,
-        drawPolygons,
-        drawPolygon,
-        drawGrid,
-        drawToPoint,
-        updateRubberbandRectangle,
-        drawRubberbandShape,
-        saveDrawingSurface,
-        restoreDrawingSurface,
-        updateRubberband,
-        windowToCanvas,
-        drawHorizontalLine,
-        drawVerticalLine,
-        drawGuidewires,
-        startDragging,
-        drawState,
-        drawTransition,
-        drawTransitions,
-        drawStates,
-        setSelectedObject,
-        unselectObject,
-        moveCursor,
-        blinkCursor,
-        setText,
-        resetContext,
-        deleteObject,
-        drawParallelLine,
-        drawNormalLine,
-        drawIntersectionPoint,
-        getDistance,
-        findStateAtPosition,
-        // Objects
-        Circle,
-        Shape,
-        Point,
-        Polygon,
-        State,
-        Transition,
-        TextLine,
-        TextCursor,
-        // Events
-        onClick,
-        onDoubleClick,
-        onMouseDown,
-        onMouseUp,
-        onMouseMove,
-        onInputChange,
-        onGraphLoad,
-        onGraphPrint,
-        // Public Methods
-        initModule,
-        getStates;
+        canvas, context, loc, cursor, line, fontHeight, copyAnchorMap,
+        setJqueryMap, changeAnchorPart, drawCircle, drawPolygons, drawPolygon,
+        drawGrid, drawToPoint, updateRubberbandRectangle, drawRubberbandShape,
+        saveDrawingSurface, restoreDrawingSurface, updateRubberband, windowToCanvas,
+        drawHorizontalLine, drawVerticalLine, drawGuidewires, startDragging, drawState,
+        drawTransition, drawTransitions, drawStates, setSelectedObject, unselectObject,
+        moveCursor, blinkCursor, setText, resetContext, deleteObject, drawParallelLine,
+        drawNormalLine, drawIntersectionPoint, getDistance, findStateAtPosition, Circle,
+        Shape, Point, Polygon, State, Transition, TextLine, TextCursor, Vector, onClick,
+        onDoubleClick, onMouseDown, onMouseUp, onMouseMove, onInputChange, onGraphLoad,
+        onGraphPrint, initModule, getStates;
     //----------------- END MODULE SCOPE VARIABLES ---------------
 
     //----------------- BEGIN OBJECT CONSTRUCTORS ----------------
@@ -223,7 +172,7 @@ fsm.graph = (function() {
         this.filled = filled;
     };
     // End Object Constructor /Circle/
-    //Circle.prototype = new Shape();
+
     // Begin Object Prototype /Circle.prototype/
     Circle.prototype = new Shape();
 
@@ -336,6 +285,7 @@ fsm.graph = (function() {
         this.center = new Point(0, 0);
         this.center.x = this.startState.x - (this.startState.x - this.endState.x) / 2;
         this.center.y = this.startState.y - (this.startState.y - this.endState.y) / 2;
+        this.circle = new Circle();
         this.controlPoint = new Circle(this.center.x, this.center.y, 10, this.strokeStyle);
         this.centerDistance = 0;
         this.distanceToControlPoint = 0;
@@ -364,13 +314,10 @@ fsm.graph = (function() {
             this.selfState.x = this.modStartPoint.x + 8;
             this.selfState.y = this.modStartPoint.y;
             this.centerDistance = getDistance(this.center.x, this.center.y, this.startState.x, this.startState.y);
-           // this.updateControlPoint();
+            this.updateControlPoint();
         },
-        updateControlPoint: function () {
-            if (this.controlPoint.x == this.center.x && this.controlPoint.y == this.center.y) {
-                return false;
-            }
-            
+        pointDistanceAway: function(startX, startY, distance, slope, direction){
+            var point = new Point();
             // A = central point
             // t = distance
             // N = normalized vector
@@ -378,20 +325,59 @@ fsm.graph = (function() {
             //magnitude = (1^2 + m^2)^(1/2)
             //N = <1, m> / magnitude = <1 / magnitude, m / magnitude>
             //f(t) = A + t * N  //vector addition and vector multiplication
+            direction = direction || 1;
+            var t = distance * direction;
+            var magnitude = Math.pow(Math.pow(1 +  slope, 2), 0.5);
 
-            var t = this.distanceToControlPoint;
-            var magnitude = Math.pow(Math.pow(1 + -1/this.slope, 2), 0.5);
-
-            var N = new Point(1 / magnitude, -1 / this.slope / magnitude);
+            var N = new Point(1 / magnitude, slope / magnitude);
 
             N.x = N.x * t;
             N.y = N.y * t;
 
-            this.controlPoint.x = this.center.x + N.x;
-            this.controlPoint.y = this.center.y + N.y;
+            point.x = startX + N.x;
+            point.y = startY + N.y;
 
+            return point;
         },
+        updateControlPoint: function () {
+            if (this.controlPoint.x == this.center.x && this.controlPoint.y == this.center.y) {
+                return false;
+            }
+
+          
+            
+            var tempPoint = this.pointDistanceAway(this.center.x, this.center.y, this.distanceToControlPoint, -1 / this.slope);
+
+            this.controlPoint.x = tempPoint.x;
+            this.controlPoint.y = tempPoint.y;
+            this.circle = this.circleFrom3Points(this.startState.x, this.startState.y, this.endState.x, this.endState.y, this.controlPoint.x, this.controlPoint.y);
+        },
+       setAnchorPoint : function(x, y) {
+            var dx = this.nodeB.x - this.nodeA.x;
+            var dy = this.nodeB.y - this.nodeA.y;
+            var scale = Math.sqrt(dx * dx + dy * dy);
+            this.parallelPart = (dx * (x - this.nodeA.x) + dy * (y - this.nodeA.y)) / (scale * scale);
+            this.perpendicularPart = (dx * (y - this.nodeA.y) - dy * (x - this.nodeA.x)) / scale;
+            // snap to a straight line
+            if (this.parallelPart > 0 && this.parallelPart < 1 && Math.abs(this.perpendicularPart) < snapToPadding) {
+                this.lineAngleAdjust = (this.perpendicularPart < 0) * Math.PI;
+                this.perpendicularPart = 0;
+            }
+       },
+       getAnchorPoint : function() {
+           var dx = this.nodeB.x - this.nodeA.x;
+           var dy = this.nodeB.y - this.nodeA.y;
+           var scale = Math.sqrt(dx * dx + dy * dy);
+           return {
+               'x': this.nodeA.x + dx * this.parallelPart - dy * this.perpendicularPart / scale,
+               'y': this.nodeA.y + dy * this.parallelPart + dx * this.perpendicularPart / scale
+           };
+       },
         modifyControlPoint: function (x, y) {
+            this.setAnchorPoint(x, y);
+
+            var direction = 1;
+            //parallel line needs to reflect direction
             //parallel line equation
             var b1;
             b1 = y - x * this.slope;
@@ -406,10 +392,29 @@ fsm.graph = (function() {
             this.controlPoint.x = -1 * (b1 - b2) / (this.slope - invertedSlope);
             this.controlPoint.y = invertedSlope * this.controlPoint.x + b2;
 
-            this.distanceToControlPoint = getDistance(this.center.x, this.center.y, this.controlPoint.x, this.controlPoint.y);
-           
-            // calculate angle to control point
-            //this.controlPointAngle = Math.atan2(this.controlPoint.y - this.startState.y, this.controlPoint.x - this.startState.x);
+            this.distanceToControlPoint = getDistance(this.center.x, this.center.y, this.controlPoint.x, this.controlPoint.y, direction);
+        },
+        circleFrom3Points: function(x1,y1, x2,y2, x3, y3){
+            //create circle from 3 points
+            /*
+            http://randomfox.livejournal.com/13598.html
+             */
+
+            var temp = x2 *x2 + y2 *y2;
+            var bc = (x1 * x1 + y1 * y1 - temp) / 2.;
+            var cd = (temp - x3 * x3 - y3 * y3) / 2.;
+            var det = (x1 - x2) * (y2 - y3) - (x2 - x3) * (y1 - y2);
+
+            if (Math.abs(det) < 1e-14)
+                return false;
+
+            var circ = new Array(
+            (bc * (y2 - y3) - cd * (y1 - y2)) / det,
+            ((x1 - x2) * cd - (x2 - x3) * bc) / det
+            );
+
+
+                return new Circle(circ[0], circ[1], getDistance(circ[0], circ[1], this.controlPoint.x, this.controlPoint.y), 'black', 'white', false);
         },
         drawControlPoint: function (context) {
             if (this.isControlPointSelected) {
@@ -424,9 +429,17 @@ fsm.graph = (function() {
             context.fill();
             context.stroke();
             context.restore();
+
+            context.save();
+            context.beginPath();
+            context.arc(this.circle.x, this.circle.y, 5, 0, 2 * Math.PI, this.strokeStyle, true);
+            context.fillStyle = this.strokeStyle;
+            context.fill();
+            context.stroke();
+            context.restore();
         },
         drawText: function (context) {
-            var line = new TextLine(this.center.x, this.center.y);
+            var line = new TextLine(this.controlPoint.x, this.controlPoint.y);
             line.text = this.isEditingText ? "" : this.text;
             line.draw(context);
         },
@@ -437,16 +450,23 @@ fsm.graph = (function() {
                 this.strokeStyle = 'blue';
             } else {
                 this.strokeStyle = 'black';
-               // this.isControlPointSelected = false;
             }
             if (this.startState != this.endState) {
-                this.drawArrow(this.modStartPoint.x, this.modStartPoint.y, this.modEndPoint.x, this.modEndPoint.y, this.angle);
-
-               // this.drawControlPoint(context);
+              
+                if (this.controlPoint.x != this.center.x || this.controlPoint.y != this.center.y) {
+                
+                    var startAngle = Math.atan2(this.startState.y - this.circle.y, this.startState.x - this.circle.x);
+                    var endAngle = Math.atan2(this.endState.y - this.circle.y, this.endState.x - this.circle.x);
+                    this.drawArcedArrow(this.circle.x, this.circle.y, this.circle.radius, startAngle, endAngle, false, false, 10);
+                } else {
+                    this.drawArrow(this.modStartPoint.x, this.modStartPoint.y, this.modEndPoint.x, this.modEndPoint.y, this.angle);
+                }
+              
+              //  
             } else {
-                //context.arc(this.selfState.x, this.selfState.y, this.selfState.radius, 0, 2 * Math.PI);
                 this.drawArcedArrow(this.selfState.x, this.selfState.y, this.selfState.radius, 7 * Math.PI / 6, 5* Math.PI/6, false, false, 10);
             }
+            this.drawControlPoint(context);
             this.drawText(context);
         },
         isPointInPath: function (x, y) {
@@ -468,13 +488,6 @@ fsm.graph = (function() {
                     / Math.sqrt(
                         Math.pow(this.endState.x - this.startState.x, 2) + Math.pow(this.endState.y - this.startState.y, 2)
                     );
-
-                // check to see if x and y are in control point so we can drag our brezier curve
-                //if (this.controlPoint.isPointInPath(context, x, y)) {
-                //    this.isControlPointSelected = true;
-                //} else {
-                //    this.isControlPointSelected = false;
-                //}
 
                 if (distanceToLine >= -1 * fluff && distanceToLine < fluff) {
                     return true;
@@ -508,9 +521,7 @@ fsm.graph = (function() {
                 context.lineTo(x2, y2);
             } else {
                 context.moveTo(this.modStartPoint.x, this.modStartPoint.y);
-               // context.quadraticCurveTo(this.controlPoint.x, this.controlPoint.y, this.modEndPoint.x, this.modEndPoint.y);
                 context.lineTo(this.modEndPoint.x, this.modEndPoint.y);
-                //context.quadraticCurveTo(this.controlPoint.x, this.controlPoint.y, this.modEndPoint.x, this.modEndPoint.y);
             }
            
             
@@ -545,14 +556,13 @@ fsm.graph = (function() {
             context.restore();
         },
         drawArcedArrow: function (x, y, radius, startAngle, endAngle, counterClockwise, arrowAngle, length) {
-            //if (!x || !y || !radius || !startAngle || !endAngle) {
-            //    return false;
-            //}
             var sx, sy, lineangle, destx, desty;
+
             sx = Math.cos(startAngle) * radius + x;
             sy = Math.sin(startAngle) * radius + y;
             lineangle = Math.atan2(x - sx, sy - y);
             counterClockwise = counterClockwise || false;
+
             if (counterClockwise) {
                 destx = sx + 10 * Math.cos(lineangle);
                 desty = sy + 10 * Math.sin(lineangle);
@@ -560,7 +570,6 @@ fsm.graph = (function() {
                 destx = sx - 10 * Math.cos(lineangle);
                 desty = sy - 10 * Math.sin(lineangle);
             }
-            //ctx.strokeStyle = 'rgba(0,0,0,0)';    // don't show the shaft
             
             context.save();
             context.strokeStyle = this.strokeStyle;
@@ -569,14 +578,13 @@ fsm.graph = (function() {
             context.arc(x, y, radius, startAngle, endAngle, counterClockwise);
             context.stroke();
             context.restore();
+
             this.drawArrowHead(sx, sy, endAngle, arrowAngle, length);
            
         }
     };
     // End Object Prototype /Transition.prototype/
 
-
-    
 
     TextCursor = function(width, fillStyle) {
         this.fillStyle = fillStyle || 'rgba(0,0,0,0.5)';
@@ -619,6 +627,7 @@ fsm.graph = (function() {
         this.font = settingsMap.font;
     };
     // End Object Constructor /TextLine/
+
     // Begin Object Prototype /TextLine.prototype/
     TextLine.prototype = {
         insert: function(text) {
@@ -659,7 +668,59 @@ fsm.graph = (function() {
         }
     };
     // End Object Prototype /TextLine.prototype/
+    // Constructor........................................................
+    Vector = function(x, y) {
+        this.x = x;
+        this.y = y;
+    };
+    // Prototype..........................................................
+    Vector.prototype = {
+        getMagnitude: function () {
+            return Math.sqrt(Math.pow(this.x,
+            2) +
+            Math.pow(this.y, 2));
+        },
+        add: function (vector) {
+            var v = new Vector();
+            v.x = this.x + vector.x;
+            v.y = this.y + vector.y;
+            return v;
+        },
+        subtract: function (vector) {
+            var v = new Vector();
+            v.x = this.x - vector.x;
+            v.y = this.y - vector.y;
+            return v;
+        },
+        dotProduct: function (vector) {
+            return this.x * vector.x +
+            this.y * vector.y;
+        },
+        edge: function (vector) { return
+            this.subtract(vector);
+        },
+        perpendicular: function () {
+            var v = new Vector();
+            v.x = this.y;
+            v.y = 0-this.x;
+            return v;
+        }, 
+        normalize: function () {
+            var v = new Vector(0, 0),
+            m = this.getMagnitude();
+            if (m != 0) {
+                v.x = this.x / m;
+                v.y = this.y / m;
+            }
+            return v;
+        },
+        normal: function () {
+            var p = this.perpendicular();
+            return p.normalize();
+        }
+    };
     //----------------- END OBJECT CONSTRUCTORS ------------------
+
     //-------------------- BEGIN UTILITY METHODS -----------------
     // Returns copy of stored anchor map; minimized overhead
     copyAnchorMap = function() {
@@ -673,7 +734,8 @@ fsm.graph = (function() {
             x: x - bbox.left * (canvas.width / bbox.width),
             y: y - bbox.top * (canvas.height / bbox.height)
         };
-    }; // End Utility Method /windowToCanvas/
+    };
+    // End Utility Method /windowToCanvas/
 
     //Begin Utility Method /getDistance/
     getDistance = function(x1, y1, x2, y2) {
@@ -684,8 +746,8 @@ fsm.graph = (function() {
     }
     // End Utility Method /getDistance/
 
-    //
     //--------------------- END UTILITY METHODS ------------------
+
     //--------------------- BEGIN DOM METHODS --------------------
     // Begin DOM method /setJqueryMap/
     setJqueryMap = function() {
@@ -783,35 +845,6 @@ fsm.graph = (function() {
     };
     // End DOM method /drawGrid/
 
-    // Begin DOM method /drawPolygons/
-    drawPolygons = function() {
-        stateMap.polygons.forEach(function(polygon) {
-            drawPolygon(polygon);
-        });
-    };
-    // End DOM method /drawPolygons/
-
-    // Begin DOM method /drawPolygons/
-    drawStates = function() {
-
-        stateMap.states.forEach(function (state) {
-            drawState(state);
-            drawTransitions(state);
-        });
-
-       
-    };
-    // End DOM method /drawPolygons/
-
-    // Begin DOM method /drawPolygon/
-    drawPolygon = function(polygon) {
-        context.beginPath();
-        polygon.createPath(context);
-        polygon.stroke(context);
-        polygon.fill(context);
-    };
-    // End DOM method /drawPolygon/
-
     // Begin DOM method /drawState/
     drawState = function(state) {
         context.beginPath();
@@ -820,15 +853,6 @@ fsm.graph = (function() {
         state.stroke(context);
     };
     // End DOM method /drawState/
-
-
-    // Begin DOM method /drawCirlce/
-    drawCircle = function(context, posX, posY) {
-        context.beginPath();
-        context.arc(posX, posY, 40, 0, 2 * Math.PI);
-        context.stroke();
-    };
-    // End DOM method /drawCircle/
 
     // Begin DOM method /drawTransition/
     drawTransition = function(transition) {
@@ -846,19 +870,7 @@ fsm.graph = (function() {
             }
         }
     };
-    drawToPoint = function (fromLoc, toLoc) {
-        var strokeStyle = 'black',
-            lineWidth = 2;
-        context.save();
-        context.strokeStyle = strokeStyle;
-        context.beginPath();
-        context.moveTo(fromLoc.x, fromLoc.y);
-        context.lineWidth = lineWidth;
-        context.lineTo(toLoc.x, toLoc.y);
-        context.stroke();
-        context.restore();
-    }
-
+   
     drawHorizontalLine = function (y) {
         context.beginPath();
         context.lineWidth = 1;
@@ -866,12 +878,14 @@ fsm.graph = (function() {
         context.lineTo(context.canvas.width, y + 0.5);
         context.stroke();
     };
+
     drawVerticalLine = function (x) {
         context.beginPath();
         context.moveTo(x + 0.5, 0);
         context.lineTo(x + 0.5, context.canvas.height);
         context.stroke();
     };
+
     drawGuidewires = function (x, y) {
         context.save();
         context.strokeStyle = 'rgba(0,0,230,0.8)';
@@ -897,18 +911,6 @@ fsm.graph = (function() {
             stateMap.rubberbandRect.top = loc.y;
         }
     };
-    drawRubberbandShape = function (loc) {
-        var state = new State(stateMap.mouseDown.x, stateMap.mouseDown.y);
-        drawState(state);
-        if (!stateMap.dragging) {
-            stateMap.states.push(state);
-        }
-    };
-    updateRubberband = function (loc) {
-        updateRubberbandRectangle(loc);
-        drawRubberbandShape(loc);
-    };
-
 
     // Begin DOM method /drawParallelLine/
     drawParallelLine = function(x1, y1, slope) {
@@ -959,7 +961,6 @@ fsm.graph = (function() {
         //parallel line equation
         var b1;
         b1 = y1 - x1 * slope;
-       
 
         //normal line equation
         var b2, invertedSlope;
@@ -981,6 +982,7 @@ fsm.graph = (function() {
         context.stroke();
     };
     // End DOM method /drawIntersectionPoint/
+
     // Begin DOM method /startDragging/
     startDragging = function (loc) {
         saveDrawingSurface();
@@ -1016,6 +1018,7 @@ fsm.graph = (function() {
         resetContext();
     };
     // End DOM method /setSelectedObject/
+
     // Begin DOM method /unselectObject/
     unselectObject = function (obj) {
         if (obj != null){
@@ -1024,6 +1027,7 @@ fsm.graph = (function() {
         stateMap.selectedObject = null;
     };
     // End DOM method /unselectObject/
+
     // Begin DOM method /moveCursorblinkCursor/
     blinkCursor = function (loc) {
        
@@ -1067,14 +1071,65 @@ fsm.graph = (function() {
             drawGrid(context, 'light gray', 10, 10);
         }
         drawStates();
-        //if (settingsMap.debug && stateMap.selectedObject instanceof Transition && !stateMap.isEditingText) {
-        //    drawParallelLine(loc.x, loc.y, stateMap.selectedObject.slope);
-        //    drawNormalLine(stateMap.selectedObject.center.x, stateMap.selectedObject.center.y, stateMap.selectedObject.slope);
-        //    drawIntersectionPoint(loc.x, loc.y, stateMap.selectedObject.center.x, stateMap.selectedObject.center.y, stateMap.selectedObject.slope);
-        //}
+
+        var img = jqueryMap.$graph[0].toDataURL();
+        $.gevent.publish('fsm-graph-updated', { img: img });
+      
     }
     // End DOM method /resetCanvas/
 
+    // Begin DOM method /drawStates/
+    drawStates = function () {
+
+        stateMap.states.forEach(function (state) {
+            drawState(state);
+            drawTransitions(state);
+        });
+
+
+    };
+    // End DOM method /drawStates/
+
+    // Begin DOM method /drawState/
+    drawState = function (state) {
+        context.beginPath();
+        context.lineWidth = 5;
+        state.createPath(context);
+        state.stroke(context);
+    };
+    // End DOM method /drawState/
+    // Begin DOM method /drawTransition/
+    drawTransition = function (transition) {
+        transition.stroke(context);
+    }; 
+    // End DOM method /drawTransition/
+    // Begin DOM method /drawTransitions/
+    drawTransitions = function (state) {
+        var i;
+        for (i = 0; i < state.transitions.length; i++) {
+            if (stateMap.states.indexOf(state.transitions[i].endState) >= 0) {
+                drawTransition(state.transitions[i]);
+            } else {
+                //clean up any dangling transitions
+                state.transitions.splice(i, 1);
+            }
+        }
+    };
+    // End DOM method /drawTransitions/
+    // Begin DOM method /drawToPoint/
+    drawToPoint = function (fromLoc, toLoc) {
+        var strokeStyle = 'black',
+            lineWidth = 2;
+        context.save();
+        context.strokeStyle = strokeStyle;
+        context.beginPath();
+        context.moveTo(fromLoc.x, fromLoc.y);
+        context.lineWidth = lineWidth;
+        context.lineTo(toLoc.x, toLoc.y);
+        context.stroke();
+        context.restore();
+    }
+    // End DOM method /drawToPoint/
     // Begin DOM method /deleteObject/
     deleteObject = function(obj) {
         var index,
@@ -1110,6 +1165,7 @@ fsm.graph = (function() {
     }
     // End DOM method /findStateAtPosition/
     //--------------------- END DOM METHODS ----------------------
+
     //------------------- BEGIN EVENT HANDLERS -------------------
 
     // Begin Event Hanlder /onClick/
@@ -1121,8 +1177,6 @@ fsm.graph = (function() {
 
     // Begin Event Hanlder /onDoubleClick/
     onDoubleClick = function (event) {
-   
-        
         var state;
         
         if (stateMap.selectedObject instanceof State) {
@@ -1140,9 +1194,10 @@ fsm.graph = (function() {
 
         state = new State(loc.x, loc.y);
         setSelectedObject(state);
-        resetContext();
+       
         drawState(state);
         stateMap.states.push(state);
+        resetContext();
         return true;
     };
     // End Event Handler /onDoubleClick/
@@ -1150,8 +1205,9 @@ fsm.graph = (function() {
     // Begin Event Hanlder /onMouseDown/
     onMouseDown = function (e) {
         var objClicked = false, i = 0;
+
         loc = windowToCanvas(canvas, e.clientX, e.clientY);
-       // e.preventDefault(); // Prevent cursor change
+
         if (stateMap.isEditingText) {
             stateMap.selectedObject.isEditingText = false;
             stateMap.selectedObject.text = line.text;
@@ -1204,10 +1260,9 @@ fsm.graph = (function() {
     // Begin Event Handler /onMouseUp/
     onMouseUp = function (e) {
         var transition;
+
         loc = windowToCanvas(canvas, e.clientX, e.clientY);
-        //if (!(stateMap.selectedObject instanceof State)) {
-        //    return false;
-        //}
+
         if (stateMap.dragging && e.shiftKey && stateMap.selectedObject instanceof State) {
             stateMap.states.forEach(function(state) {
                 state.createPath(context);
@@ -1219,30 +1274,33 @@ fsm.graph = (function() {
                     return;
                 }
             });
-        } 
+        } else if (stateMap.dragging instanceof Circle && stateMap.selectedObject instanceof Transition) {
+            if (stateMap.selectedObject.distanceToControlPoint < 15) {
+                stateMap.selectedObject.controlPoint.x = stateMap.selectedObject.center.x;
+                stateMap.selectedObject.controlPoint.y = stateMap.selectedObject.center.y;
+            }
+        }
         stateMap.dragging = false;
+
+       
         resetContext();
-        //restoreDrawingSurface();
-        //updateRubberband(loc);
 
     };
     // End Event Handler /onMouseUp
 
     // Begin Event Handler /onMouseMove/
     onMouseMove = function (e) {
-       
         loc = windowToCanvas(canvas, e.clientX, e.clientY);
         e.preventDefault(); // Prevent selections
         if (stateMap.selectedObject instanceof Transition  && !stateMap.isEditingText) {
             resetContext();
         }
         if (stateMap.dragging) {
-            //if (stateMap.selectedObject instanceof Transition) {
-            //    stateMap.selectedObject.modifyControlPoint(loc.x, loc.y);
-            //} else {
-                stateMap.dragging.x = loc.x - stateMap.draggingOffsetX;
-                stateMap.dragging.y = loc.y - stateMap.draggingOffsetY;
-            //}
+            stateMap.dragging.x = loc.x - stateMap.draggingOffsetX;
+            stateMap.dragging.y = loc.y - stateMap.draggingOffsetY;
+            if (stateMap.selectedObject instanceof Transition  && stateMap.dragging instanceof Circle) {
+                stateMap.selectedObject.modifyControlPoint(stateMap.dragging.x, stateMap.dragging.y);
+            }
         
             resetContext();
             if (stateMap.dragging instanceof Point) {
@@ -1251,6 +1309,9 @@ fsm.graph = (function() {
             if (settingsMap.guide_wires) {
                 if (stateMap.dragging instanceof Point) {
                     drawGuidewires(loc.x, loc.y);
+                } else if (stateMap.dragging instanceof Circle && stateMap.selectedObject instanceof Transition){
+                    drawParallelLine(stateMap.selectedObject.controlPoint.x, stateMap.selectedObject.controlPoint.y, stateMap.selectedObject.slope);
+                    drawNormalLine(stateMap.selectedObject.controlPoint.x, stateMap.selectedObject.controlPoint.y, stateMap.selectedObject.slope);
                 } else {
                     drawGuidewires(stateMap.dragging.x, stateMap.dragging.y);
                 }
@@ -1264,8 +1325,6 @@ fsm.graph = (function() {
     onInputChange = function (e, input) {
         var key,
             text = input;
-            
-        
         //loop through regex patterns until match
         //then replace pattern match with special char
         for (key in patternMap) {
@@ -1338,8 +1397,6 @@ fsm.graph = (function() {
     };
     // End Event Handler /onGraphPrint/
 
-
-
     //-------------------- END EVENT HANDLERS --------------------
     //------------------- BEGIN PUBLIC METHODS -------------------
     // Begin Public method /initModule/
@@ -1352,6 +1409,16 @@ fsm.graph = (function() {
         context = canvas.getContext('2d');
         cursor = new TextCursor();
         drawGrid(context, 'lightgray', 10, 10);
+        jqueryMap.$graph.attr({ width: jqueryMap.$container.width() * 0.98, height: jqueryMap.$container.height() * 0.96 });
+        jqueryMap.$graph.css({ width: jqueryMap.$container.width() * 0.98, height: jqueryMap.$container.height() * 0.96 });
+        resetContext();
+
+       $(window)
+            .on('resize', function () {
+                jqueryMap.$graph.attr({ width: jqueryMap.$container.width() * 0.98, height: jqueryMap.$container.height() * 0.96 });
+                jqueryMap.$graph.css({ width: jqueryMap.$container.width() * 0.98, height: jqueryMap.$container.height() * 0.96 });
+                resetContext();
+            })
 
 
         jqueryMap.$graph
@@ -1361,7 +1428,7 @@ fsm.graph = (function() {
             .on('mouseup', onMouseUp)
             .on('mousemove', onMouseMove);
 
-        $.gevent.subscribe($('#fsm'), 'fsm-new', function (event) {
+        $.gevent.subscribe($('<div/>'), 'fsm-new', function (event) {
             stateMap.states = [];
             resetContext();
         });
@@ -1374,59 +1441,59 @@ fsm.graph = (function() {
 
         $.gevent.subscribe($('<div/>'), 'fsm-print', onGraphPrint);
 
+
+
         $(document).on('click', function(e) {
             stateMap.hasFocus = false;
         });
 
-        $(document)
-            .on('keydown', function (e) {
-                if (!stateMap.hasFocus) {
-                    return;
-                }
+        $(document).on('keydown', function (e) {
             var delReturnVal;
+            if (!stateMap.hasFocus) {
+                return;
+            }
            
-                if (e.keyCode === 8 || e.keyCode === 13) {
-                    // The call to e.preventDefault() suppresses the browser's
-                    // subsequent call to document.onkeypress(), so
-                    // only suppress that call for Backspace and Enter.
-                    e.preventDefault();
-                }
-                if (stateMap.selectedObject == null) {
-                    return false;
-                }
-                if (e.keyCode === 8) { // Backspace
-                    if (!stateMap.isEditingText) {
-                        stateMap.isEditingText = true;
-                        fontHeight = context.measureText('W').width;
-                        fontHeight += fontHeight / 6;
-                        stateMap.selectedObject.isEditingText = true;
-                        line = new TextLine(stateMap.selectedObject.center.x, stateMap.selectedObject.center.y);
-                        line.insert(stateMap.selectedObject.text);
-                        moveCursor(line.left + line.getWidth(context) * 0.6, line.bottom + line.getHeight(context) *0.5);
+            if (e.keyCode === 8 || e.keyCode === 13) {
+                // The call to e.preventDefault() suppresses the browser's
+                // subsequent call to document.onkeypress(), so
+                // only suppress that call for Backspace and Enter.
+                e.preventDefault();
+            }
+            if (stateMap.selectedObject == null) {
+                return false;
+            }
+            if (e.keyCode === 8) { // Backspace
+                if (!stateMap.isEditingText) {
+                    stateMap.isEditingText = true;
+                    fontHeight = context.measureText('W').width;
+                    fontHeight += fontHeight / 6;
+                    stateMap.selectedObject.isEditingText = true;
+                    line = new TextLine(stateMap.selectedObject.center.x, stateMap.selectedObject.center.y);
+                    line.insert(stateMap.selectedObject.text);
+                    moveCursor(line.left + line.getWidth(context) * 0.6, line.bottom + line.getHeight(context) *0.5);
                         
-                    }
-                    resetContext();
-                    context.save();
-                   // line.erase(context, stateMap.drawingSurfaceImageData);
-                    
-                    line.removeCharacterBeforeCaret();
-                    moveCursor(line.left + line.getWidth(context) * 0.6, line.bottom + line.getHeight(context) * 0.5);
-                    line.erase(context, stateMap.drawingSurfaceImageData);
-                    line.draw(context);
-                   
-                    context.restore();
-                    
-                    
-                } else if (e.keyCode === 46) { // Delete 
-                    delReturnVal = deleteObject(stateMap.selectedObject);
-                    if (delReturnVal) {
-                        stateMap.selectedTransition = null;
-                        resetContext();
-                    }
                 }
-            });
-        $(document)
-            .on('keypress', function (e) {
+                resetContext();
+                context.save();
+                    
+                line.removeCharacterBeforeCaret();
+                moveCursor(line.left + line.getWidth(context) * 0.6, line.bottom + line.getHeight(context) * 0.5);
+                line.erase(context, stateMap.drawingSurfaceImageData);
+                line.draw(context);
+                   
+                context.restore();
+                    
+                    
+            } else if (e.keyCode === 46) { // Delete 
+                delReturnVal = deleteObject(stateMap.selectedObject);
+                if (delReturnVal) {
+                    stateMap.selectedTransition = null;
+                    resetContext();
+                }
+            }
+        });
+
+        $(document).on('keypress', function (e) {
                 if (!stateMap.hasFocus) {
                     return;
                 }
@@ -1448,16 +1515,11 @@ fsm.graph = (function() {
                     resetContext();
                     e.preventDefault(); // No further browser processing
                     context.save();
-                    //line.erase(context, stateMap.drawingSurfaceImageData);
                     line.insert(key);
                     keyReplace = onInputChange(e, line.text);
                     line.replace(keyReplace);
                     stateMap.selectedObject.text = line.text;
                     moveCursor(line.left + line.getWidth(context) * 0.6, line.bottom + line.getHeight(context) * 0.5);
-                    //context.shadowColor = 'rgba(0,0,0,0.5)';
-                    //context.shadowOffsetX = 1;
-                    //context.shadowOffsetY = 1;
-                    //context.shadowBlur = 2;
                     line.draw(context);
                     context.restore();
                 }
@@ -1472,8 +1534,6 @@ fsm.graph = (function() {
         return stateMap.states;
     };
     // End PUBLIC method /getStates/
-
-
 
     return {
         initModule: initModule,

@@ -41,7 +41,13 @@ fsm.shell = (function () {
                         + '<li class="list-group-item">/epsilon = &epsilon;</li>'
                         + '<li class="list-group-item">/delta = &delta;</li>'
                     + '</ul>'
-                +'</div>'
+                + '</div>'
+                  + '<div class="panel panel-primary">'
+                    + '<div class="panel-heading">'
+                        + '<h6>Navigation Map</h6>'
+                    + '</div>'
+                    + '<div class="fsm-nav-map"><img class="fsm-graph-image"/><div class="draggable"></div><div class="drag-clone"></div></div>'
+                + '</div>'
             +'</div>'
             + '<div class="fsm-shell-main-content"></div>'
         + '</div>'
@@ -53,8 +59,8 @@ fsm.shell = (function () {
         anchor_map : {}
     },
     jqueryMap = {},
-    copyAnchorMap, setJqueryMap,
-    changeAnchorPart,
+    copyAnchorMap, setJqueryMap, updateNavMap,
+    changeAnchorPart, onNavMove, onNavClick, onGraphUpdate,
     initModule;
     //----------------- END MODULE SCOPE VARIABLES ---------------
     //-------------------- BEGIN UTILITY METHODS -----------------
@@ -71,7 +77,11 @@ fsm.shell = (function () {
             $container: $container,
             $sidebar : $container.find('.fsm-shell-main-sidebar'),
             $main_content: $container.find('.fsm-shell-main-content'),
-            $menu: $container.find('.fsm-shell-menu')
+            $menu: $container.find('.fsm-shell-menu'),
+            $nav_drag: $container.find('.draggable'),
+            $nav_drag_clone: $container.find('.drag-clone'),
+            $nav_container: $container.find('.fsm-nav-map'),
+            $nav_image: $container.find('.fsm-graph-image')
         };
     };
     // End DOM method /setJqueryMap/
@@ -139,9 +149,65 @@ fsm.shell = (function () {
         return bool_return;
     };
     // End DOM method /changeAnchorPart/
+    
+    updateNavMap = function (update_map) {
+       
+    };
     //--------------------- END DOM METHODS ----------------------
     //------------------- BEGIN EVENT HANDLERS -------------------
-  
+    onNavClick = function (e) {
+        var mousePos = {
+            left: e.pageX - $(this).offset().left,
+            top: e.pageY - $(this).offset().top
+        },
+        nav_center_offset = { left: jqueryMap.$nav_drag.width() * 0.5, top: jqueryMap.$nav_drag.height() * 0.5 };
+        
+        jqueryMap.$nav_drag.css({ left: (mousePos.left - nav_center_offset.left) + 'px', top: (mousePos.top - nav_center_offset.top) + 'px' });
+
+
+        jqueryMap.$nav_drag.trigger('drag');
+        
+
+
+    }
+    onNavMove =  function (e) {
+        var $nav_container = jqueryMap.$nav_container,
+            $this = $(this),
+            nav_drag_position = {left: parseInt($this.css('left'), 10), top: parseInt($this.css('top'),10)},
+            nav_container_position = $nav_container.position();
+
+        //bind nav drag to container
+        if (nav_drag_position.left < 0) {
+            $this.css('left', '0px');
+          
+           // e.preventDefault();
+        }
+        if (nav_drag_position.top < 0) {
+            $this.css('top', '0px');
+         
+          //  e.preventDefault();
+        }
+        if (nav_drag_position.top + $this.height() > $nav_container.height()) {
+            $this.css('top', ($nav_container.height() - $this.height()) + 'px');
+
+          //  e.preventDefault();
+        }
+        if (nav_drag_position.left + $this.width() > $nav_container.width()) {
+            $this.css('left', ($nav_container.width() - $this.width()) + 'px');
+
+          //  e.preventDefault();
+        }
+
+        $.gevent.publish('fsm-nav-moved');
+    };
+
+    onGraphUpdate = function (e, update_map) {
+        var img = update_map.img;
+
+        jqueryMap.$nav_image.attr('src', img);
+        jqueryMap.$nav_image.width(jqueryMap.$nav_container.css('width'));
+        jqueryMap.$nav_image.height(jqueryMap.$nav_container.css('height'));
+    };
     //-------------------- END EVENT HANDLERS --------------------
     //------------------- BEGIN PUBLIC METHODS -------------------
     // Begin Public method /initModule/
@@ -150,14 +216,16 @@ fsm.shell = (function () {
         stateMap.$container = $container;
         $container.html(configMap.main_html);
         setJqueryMap();
-        
-
-     
-
+        jqueryMap.$nav_drag.draggable({ containment: "parent" });
         fsm.menu.initModule(jqueryMap.$menu);
         fsm.graph.initModule(jqueryMap.$main_content);
-        
 
+        //jqueryMap.$nav_drag
+        //    .on('drag', onNavMove)
+        //    .on('dragstop', onNavMove);
+        jqueryMap.$nav_container.on('mousedown', onNavClick);
+
+        $.gevent.subscribe($('<div/>'),'fsm-graph-updated', onGraphUpdate);
     };
     // End PUBLIC method /initModule/
     return { initModule: initModule };

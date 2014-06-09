@@ -8,7 +8,7 @@ newcap : true, nomen : true, plusplus : true,
 regexp : true, sloppy : true, vars : false,
 white : true
 */
-/*global $, io, spa */
+/*global $, io, fsm */
 fsm.data = (function () {
     'use strict';
     var
@@ -32,7 +32,9 @@ fsm.data = (function () {
         if (!stateMap.sio) { stateMap.sio = makeSio(); }
         return stateMap.sio;
     };
+
     initModule = function () { };
+
     return {
         getSio: getSio,
         initModule: initModule

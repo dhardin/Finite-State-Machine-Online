@@ -86,6 +86,22 @@
             width: 0;
         }
 
+            .fsm-shell-main-sidebar .fsm-nav-map {
+                height: 100px;
+            }
+             .fsm-shell-main-sidebar .fsm-nav-map img {
+                float: left;
+            }
+
+            .fsm-shell-main-sidebar .draggable {
+                width: 30%;
+                height: 30%;
+                border: 1px solid #ff0000;
+            }
+
+            
+
+
         .fsm-shell-main-content {
             left: 250px;
             right: 0;

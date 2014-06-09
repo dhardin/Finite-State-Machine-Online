@@ -111,9 +111,6 @@ fsm.fake = (function () {
             callback_map[ msg_type ] = callback;
         };
         emit_sio = function ( msg_type, data ) {
-            // respond to 'adduser' event with 'userupdate'
-            // callback after a 3s delay
-            //
             if ( msg_type === 'adduser' && callback_map.userupdate ) {
                 setTimeout( function () {
                     callback_map.userupdate(
@@ -170,16 +167,7 @@ fsm.fake = (function () {
                         modified: data.modified,
                         states: data.states
                     });
-                    //data.user.graphs.push(_id);
                     data.user.graphs.push(_id);
-                    //first update user to reflect new graph
-                    callback_map.userupdate(
-                        [{
-                            _id: data.user._id,
-                            name: data.user.name,
-                            graphs: data.user.graphs
-                        }]
-                    );
                     //now add graph to "database"
                     callback_map.graphupdate(
                         [{
@@ -258,5 +246,4 @@ fsm.fake = (function () {
         getPeopleList: getPeopleList,
         mockSio : mockSio
     };
-
 }());
