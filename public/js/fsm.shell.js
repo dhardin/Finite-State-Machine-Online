@@ -202,9 +202,9 @@ fsm.shell = (function () {
     };
 
     onGraphUpdate = function (e, update_map) {
-        var img = update_map.img;
+       // var img = update_map.img;
 
-        jqueryMap.$nav_image.attr('src', img);
+        jqueryMap.$nav_image.attr('src', update_map.img);
         jqueryMap.$nav_image.width(jqueryMap.$nav_container.css('width'));
         jqueryMap.$nav_image.height(jqueryMap.$nav_container.css('height'));
     };

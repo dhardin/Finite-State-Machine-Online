@@ -29,7 +29,8 @@ fsm.graph = (function() {
                 BLINK_ON: true,
                 BLINK_OFF: true,
                 debug: true,
-                font: true
+                font: true,
+                updateIntervalMax: false
             }
         },
         settingsMap = {
@@ -39,7 +40,8 @@ fsm.graph = (function() {
             BLINK_ON: 1000,
             BLINK_OFF: 500,
             debug: true,
-            font: 'normal bold 1.5em ariel'
+            font: 'normal bold 1.5em ariel',
+            updateIntervalMax: 200
         },
         stateMap = {
             $container: null,
@@ -57,7 +59,9 @@ fsm.graph = (function() {
             isEditingText: false,
             selectedObject: null,
             hasFocus: false,
-            graph: null
+            graph: null,
+            img: null,
+            timeElapsed: 0
         },
         jqueryMap = {},
         patternMap = {
@@ -286,7 +290,7 @@ fsm.graph = (function() {
         this.center.x = this.startState.x - (this.startState.x - this.endState.x) / 2;
         this.center.y = this.startState.y - (this.startState.y - this.endState.y) / 2;
         this.circle = new Circle();
-        this.controlPoint = new Circle(this.center.x, this.center.y, 10, this.strokeStyle);
+        this.controlPoint = new Circle(this.center.x, this.center.y, 3, this.strokeStyle);
         this.centerDistance = 0;
         this.distanceToControlPoint = 0;
         this.controlPointAngle = 0;
@@ -352,29 +356,7 @@ fsm.graph = (function() {
             this.controlPoint.y = tempPoint.y;
             this.circle = this.circleFrom3Points(this.startState.x, this.startState.y, this.endState.x, this.endState.y, this.controlPoint.x, this.controlPoint.y);
         },
-       setAnchorPoint : function(x, y) {
-            var dx = this.nodeB.x - this.nodeA.x;
-            var dy = this.nodeB.y - this.nodeA.y;
-            var scale = Math.sqrt(dx * dx + dy * dy);
-            this.parallelPart = (dx * (x - this.nodeA.x) + dy * (y - this.nodeA.y)) / (scale * scale);
-            this.perpendicularPart = (dx * (y - this.nodeA.y) - dy * (x - this.nodeA.x)) / scale;
-            // snap to a straight line
-            if (this.parallelPart > 0 && this.parallelPart < 1 && Math.abs(this.perpendicularPart) < snapToPadding) {
-                this.lineAngleAdjust = (this.perpendicularPart < 0) * Math.PI;
-                this.perpendicularPart = 0;
-            }
-       },
-       getAnchorPoint : function() {
-           var dx = this.nodeB.x - this.nodeA.x;
-           var dy = this.nodeB.y - this.nodeA.y;
-           var scale = Math.sqrt(dx * dx + dy * dy);
-           return {
-               'x': this.nodeA.x + dx * this.parallelPart - dy * this.perpendicularPart / scale,
-               'y': this.nodeA.y + dy * this.parallelPart + dx * this.perpendicularPart / scale
-           };
-       },
         modifyControlPoint: function (x, y) {
-            this.setAnchorPoint(x, y);
 
             var direction = 1;
             //parallel line needs to reflect direction
@@ -430,13 +412,13 @@ fsm.graph = (function() {
             context.stroke();
             context.restore();
 
-            context.save();
-            context.beginPath();
-            context.arc(this.circle.x, this.circle.y, 5, 0, 2 * Math.PI, this.strokeStyle, true);
-            context.fillStyle = this.strokeStyle;
-            context.fill();
-            context.stroke();
-            context.restore();
+            //context.save();
+            //context.beginPath();
+            //context.arc(this.circle.x, this.circle.y, 5, 0, 2 * Math.PI, this.strokeStyle, true);
+            //context.fillStyle = this.strokeStyle;
+            //context.fill();
+            //context.stroke();
+            //context.restore();
         },
         drawText: function (context) {
             var line = new TextLine(this.controlPoint.x, this.controlPoint.y);
@@ -1066,14 +1048,19 @@ fsm.graph = (function() {
 
     // Begin DOM method /resetCanvas/
     resetContext = function (hideGrid) {
+        var currentTime = new Date().getTime();
         context.clearRect(0, 0, canvas.width, canvas.height);
         if (!hideGrid){
             drawGrid(context, 'light gray', 10, 10);
         }
         drawStates();
 
-        var img = jqueryMap.$graph[0].toDataURL();
-        $.gevent.publish('fsm-graph-updated', { img: img });
+        if (!stateMap.dragging) {
+            stateMap.img = jqueryMap.$graph[0].toDataURL();
+            $.gevent.publish('fsm-graph-updated', { img: stateMap.img });
+            stateMap.timeElapsed = currentTime;
+        }
+        //clear up image caches
       
     }
     // End DOM method /resetCanvas/
@@ -1309,10 +1296,12 @@ fsm.graph = (function() {
             if (settingsMap.guide_wires) {
                 if (stateMap.dragging instanceof Point) {
                     drawGuidewires(loc.x, loc.y);
-                } else if (stateMap.dragging instanceof Circle && stateMap.selectedObject instanceof Transition){
-                    drawParallelLine(stateMap.selectedObject.controlPoint.x, stateMap.selectedObject.controlPoint.y, stateMap.selectedObject.slope);
-                    drawNormalLine(stateMap.selectedObject.controlPoint.x, stateMap.selectedObject.controlPoint.y, stateMap.selectedObject.slope);
-                } else {
+                }
+                //else if (stateMap.dragging instanceof Circle && stateMap.selectedObject instanceof Transition) {
+                //    drawParallelLine(stateMap.selectedObject.controlPoint.x, stateMap.selectedObject.controlPoint.y, stateMap.selectedObject.slope);
+                //    drawNormalLine(stateMap.selectedObject.controlPoint.x, stateMap.selectedObject.controlPoint.y, stateMap.selectedObject.slope);
+                //}
+                else {
                     drawGuidewires(stateMap.dragging.x, stateMap.dragging.y);
                 }
             }
