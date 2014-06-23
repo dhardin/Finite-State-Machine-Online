@@ -21,10 +21,7 @@ fsm.graph = (function() {
                 + '<div id="fsm-graph-print">'
                     + '<img id="fsm-graph-img"/>'
                 + '</div>'
-                + '<div id="fsm-graph-container">'
-                    + '<canvas id="fsm-graph" width="" height=""></canvas>'
-                    + '<canvas id="fsm-graph-copy" width="", height=""></canvas>'
-                + '</div>',
+                + '<canvas id="fsm-graph" width="1024" height="600"></canvas>',
             settingsMap: {
                 guide_wires: true,
                 grid: true,
@@ -44,9 +41,7 @@ fsm.graph = (function() {
             BLINK_OFF: 500,
             debug: true,
             font: 'normal bold 1.5em ariel',
-            updateIntervalMax: 200,
-            width: 2000,
-            height: 1000
+            updateIntervalMax: 200
         },
         stateMap = {
             $container: null,
@@ -66,8 +61,7 @@ fsm.graph = (function() {
             hasFocus: false,
             graph: null,
             img: null,
-            timeElapsed: 0,
-            zoomLevel: 1
+            timeElapsed: 0
         },
         jqueryMap = {},
         patternMap = {
@@ -89,8 +83,8 @@ fsm.graph = (function() {
         moveCursor, blinkCursor, setText, resetContext, deleteObject, drawParallelLine,
         drawNormalLine, drawIntersectionPoint, getDistance, findStateAtPosition, Circle,
         Shape, Point, Polygon, State, Transition, TextLine, TextCursor, Vector, onClick,
-        onDoubleClick, onMouseDown, onMouseUp, onMouseMove, onInputChange, onGraphLoad, onScroll,
-        onGraphPrint, initModule, getStates, captureCanvas, resizeCanvas;
+        onDoubleClick, onMouseDown, onMouseUp, onMouseMove, onInputChange, onGraphLoad,
+        onGraphPrint, initModule, getStates;
     //----------------- END MODULE SCOPE VARIABLES ---------------
 
     //----------------- BEGIN OBJECT CONSTRUCTORS ----------------
@@ -322,47 +316,38 @@ fsm.graph = (function() {
             this.modStartPoint.y = this.startState.y + this.endState.radius * Math.sin(this.angle);
             this.selfState.x = this.modStartPoint.x + 8;
             this.selfState.y = this.modStartPoint.y;
-            this.centerDistance = fsm.math_util.getDistance(this.center.x, this.center.y, this.startState.x, this.startState.y);
+            this.centerDistance = getDistance(this.center.x, this.center.y, this.startState.x, this.startState.y);
             this.updateAnchorPoint();
-           //this.updateControlPoint();
-        },  
+           // this.updateControlPoint();
+        },
         modifyAnchorPoint: function(x, y){
-            var distanceFromCenterToCirlceEdge = 0,
+            var distanceToAnchor = 0,
                 minDistance = 5;
-
+            if (!this.isAnchorSet) {
+                this.initalAnchorPoint.x = x;
+                this.initalAnchorPoint.y = y;
+            }
             this.anchorPoint.x = x;
             this.anchorPoint.y = y;
-            
-            this.circle = fsm.math_util.circleFrom3Points(this.startState.x, this.startState.y, this.endState.x, this.endState.y, this.anchorPoint.x, this.anchorPoint.y);
-        
-            if (!this.circle) {
-                this.isArched = false;
-            } else {
-                var intersections = fsm.math_util.getineCircleIntersections(this.circle.x, this.circle.y, this.circle.radius, this.center, { x: this.circle.x, y: this.circle.y }),
-                intersection = intersections.intersection2;
-                distanceFromCenterToCirlceEdge = fsm.math_util.getDistance(intersection.x, intersection.y, this.center.x, this.center.y);
 
-                if (distanceFromCenterToCirlceEdge >= minDistance) {
-                    this.isArched = true;
-                } else {
-                    this.isArched = false;
-                }
-            }
-        },
-        updateAnchorPoint: function () {
-            if (this.isArched) {
+            distanceToAnchor = fsm.math_util.getDistance(this.initalAnchorPoint.x, this.initalAnchorPoint.y, this.anchorPoint.x, this.anchorPoint.y);
+
+            if (distanceToAnchor >= minDistance) {
+                this.isArched = true;
+                this.circle = this.circleFrom3Points(this.startState.x, this.startState.y, this.endState.x, this.endState.y, this.anchorPoint.x, this.anchorPoint.y);
                 //find distance between anchor point and line
                 var intersections = fsm.math_util.getineCircleIntersections(this.circle.x, this.circle.y, this.circle.radius, this.center, { x: this.circle.x, y: this.circle.y }),
-                    intersection = intersections.intersection1;
-                    //distanceToIntersection1 = fsm.math_util.getDistance(intersections.intersection1.x, intersections.intersection1.y, this.anchorPoint.x, this.anchorPoint.y),
-                    //distanceToIntersection2 = fsm.math_util.getDistance(intersections.intersection2.x, intersections.intersection2.y, this.anchorPoint.x, this.anchorPoint.y);
+                    distanceToIntersection1 = fsm.math_util.getDistance(intersections.intersection1.x, intersections.intersection1.y, this.anchorPoint.x, this.anchorPoint.y),
+                    distanceToIntersection2 = fsm.math_util.getDistance(intersections.intersection2.x, intersections.intersection2.y, this.anchorPoint.x, this.anchorPoint.y);
 
-             //   this.distanceToIntersection = distanceToIntersection1 < distanceToIntersection2 ? distanceToIntersection1 : distanceToIntersection2;
+                this.distanceToIntersection = distanceToIntersection1 < distanceToIntersection2 ? distanceToIntersection1 : distanceToIntersection2;
 
-              //  var intersection = 
-
-                this.circle = fsm.math_util.circleFrom3Points(this.startState.x, this.startState.y, this.endState.x, this.endState.y, intersection.x, intersection.y);
+                //check to see if we sna
             }
+        },
+        updateAnchorPoint: function(){
+          
+
         },
       
         updateControlPoint: function () {
@@ -374,7 +359,7 @@ fsm.graph = (function() {
 
             this.controlPoint.x = tempPoint.x;
             this.controlPoint.y = tempPoint.y;
-            this.circle = fsm.math_util.circleFrom3Points(this.startState.x, this.startState.y, this.endState.x, this.endState.y, this.controlPoint.x, this.controlPoint.y);
+            this.circle = this.circleFrom3Points(this.startState.x, this.startState.y, this.endState.x, this.endState.y, this.controlPoint.x, this.controlPoint.y);
         },
         modifyControlPoint: function (x, y) {
 
@@ -396,51 +381,7 @@ fsm.graph = (function() {
 
             this.distanceToControlPoint = getDistance(this.center.x, this.center.y, this.controlPoint.x, this.controlPoint.y, direction);
         },
-        isPointInPath : function (x, y) {
-            var pointSlope,
-             fluff = 10,
-             pointToCirlce;
-
-
-            //check that point is not inside states
-            if (this.startState.isPointInPath(context, x, y)) {
-                return false;
-            } else if (this.endState.isPointInPath(context, x, y)) {
-                return false;
-            } else if (this.startState != this.endState && !this.isArched) {
-                // find vector perpendicular to sloped line that runs through
-                // x and y coordinates passed
-                //http://mathworld.wolfram.com/Point-LineDistance2-Dimensional.html
-                var distanceToLine = Math.abs((this.endState.x - this.startState.x) * (this.startState.y - y)
-                        - (this.startState.x - x) * (this.endState.y - this.startState.y))
-                    / Math.sqrt(
-                        Math.pow(this.endState.x - this.startState.x, 2) + Math.pow(this.endState.y - this.startState.y, 2)
-                    );
-
-                if (distanceToLine >= -1 * fluff && distanceToLine < fluff) {
-                    return true;
-                } else {
-                    return false;
-                }
-            } else if (this.isArched) {
-                var outerFluffCircle = new Circle(this.circle.x, this.circle.y, this.circle.radius + fluff),
-                    innerFluffCircle = new Circle(this.circle.x, this.circle.y, this.circle.radius - fluff);
-
-                if (outerFluffCircle.isPointInPath(context, x, y) && !innerFluffCircle.isPointInPath(context, x, y)) {
-                    return true;
-                } else {
-                    return false;
-                }
-            } else {
-                //check to see if x and y are located inside
-                //self transition (represented by Circle object)
-                if (this.selfState.isPointInPath(context, x, y)) {
-                    return true;
-                } else {
-                    return false;
-                }
-            }
-        },
+      
         drawControlPoint: function (context) {
             if (this.isControlPointSelected) {
                 this.strokeStyle = 'red';
@@ -454,9 +395,17 @@ fsm.graph = (function() {
             context.fill();
             context.stroke();
             context.restore();
+
+            //context.save();
+            //context.beginPath();
+            //context.arc(this.circle.x, this.circle.y, 5, 0, 2 * Math.PI, this.strokeStyle, true);
+            //context.fillStyle = this.strokeStyle;
+            //context.fill();
+            //context.stroke();
+            //context.restore();
         },
         drawText: function (context) {
-            var line = new TextLine(this.center.x, this.center.y);
+            var line = new TextLine(this.circle.x, this.circle.y);
             line.text = this.isEditingText ? "" : this.text;
             line.draw(context);
         },
@@ -479,22 +428,20 @@ fsm.graph = (function() {
                 if (this.isArched) {
                     var startAngle = Math.atan2(this.startState.y - this.circle.y, this.startState.x - this.circle.x);
                     var endAngle = Math.atan2(this.endState.y - this.circle.y, this.endState.x - this.circle.x);
-                    var counterclcokwise = this.startState.y < this.controlPoint.y ? false : true;
-           
-                    this.drawArcedArrow(context, this.circle.x, this.circle.y, this.circle.radius, startAngle, endAngle, counterclcokwise, false, 10);
+                    this.drawArcedArrow(this.circle.x, this.circle.y, this.circle.radius, startAngle, endAngle, false, false, 10);
                 } else {
-                    this.drawArrow(context, this.modStartPoint.x, this.modStartPoint.y, this.modEndPoint.x, this.modEndPoint.y, this.angle);
+                    this.drawArrow(this.modStartPoint.x, this.modStartPoint.y, this.modEndPoint.x, this.modEndPoint.y, this.angle);
                 }
               
               //  
             } else {
                 this.drawArcedArrow(this.selfState.x, this.selfState.y, this.selfState.radius, 7 * Math.PI / 6, 5* Math.PI/6, false, false, 10);
             }
-        //    this.drawControlPoint(context);
+            this.drawControlPoint(context);
             this.drawText(context);
         },
        
-        drawArrow: function (context, x1, y1, x2, y2, angle, arrowAngle, length) {
+        drawArrow: function (x1, y1, x2, y2, angle, arrowAngle, length) {
             if (!x1 || !y1 || !x2 || !y2 || !angle) {
                 return false;
             }
@@ -517,9 +464,9 @@ fsm.graph = (function() {
             
             context.stroke();
             context.restore();
-            this.drawArrowHead(context, x2, y2, angle, arrowAngle, length);
+            this.drawArrowHead(x2, y2, angle, arrowAngle, length);
         },
-        drawArrowHead: function (context, x, y, angle, arrowAngle, length) {
+        drawArrowHead: function (x, y, angle, arrowAngle, length) {
             if (!x || !y || !angle) {
                 return false;
             }
@@ -545,7 +492,7 @@ fsm.graph = (function() {
             context.stroke();
             context.restore();
         },
-        drawArcedArrow: function (context, x, y, radius, startAngle, endAngle, counterClockwise, arrowAngle, length) {
+        drawArcedArrow: function (x, y, radius, startAngle, endAngle, counterClockwise, arrowAngle, length) {
             var sx, sy, lineangle, destx, desty;
 
             sx = Math.cos(startAngle) * radius + x;
@@ -727,7 +674,14 @@ fsm.graph = (function() {
     };
     // End Utility Method /windowToCanvas/
 
-    
+    //Begin Utility Method /getDistance/
+    getDistance = function(x1, y1, x2, y2) {
+        var distance = Math.sqrt(
+                    Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2)
+                );
+        return distance;
+    }
+    // End Utility Method /getDistance/
 
     //--------------------- END UTILITY METHODS ------------------
 
@@ -738,10 +692,8 @@ fsm.graph = (function() {
         jqueryMap = {
             $container: $container,
             $graph: $('#fsm-graph'),
-            $graphCopy: $('#fsm-graph-copy'),
             $printGraph: $('#fsm-graph-print'),
-            $graphImg: $('#fsm-graph-img'),
-            $graphContainer: $('#fsm-graph-container')
+            $graphImg: $('#fsm-graph-img')
         };
     };
     // End DOM method /setJqueryMap/
@@ -812,18 +764,16 @@ fsm.graph = (function() {
     // End DOM method /changeAnchorPart/
 
     // Begin DOM method /drawGrid/
-    drawGrid = function (context, color, stepx, stepy) {
-        var i;
-
+    drawGrid = function(context, color, stepx, stepy) {
         context.strokeStyle = color;
         context.lineWidth = 0.5;
-        for (i = stepx + 0.5; i < context.canvas.width ; i += stepx) {
+        for (var i = stepx + 0.5; i < context.canvas.width; i += stepx) {
             context.beginPath();
             context.moveTo(i, 0);
             context.lineTo(i, context.canvas.height);
             context.stroke();
         }
-        for (i = stepy + 0.5 ; i < context.canvas.height ; i += stepy) {
+        for (var i = stepy + 0.5; i < context.canvas.height; i += stepy) {
             context.beginPath();
             context.moveTo(0, i);
             context.lineTo(context.canvas.width, i);
@@ -832,6 +782,32 @@ fsm.graph = (function() {
     };
     // End DOM method /drawGrid/
 
+    // Begin DOM method /drawState/
+    drawState = function(state) {
+        context.beginPath();
+        context.lineWidth = 5;
+        state.createPath(context);
+        state.stroke(context);
+    };
+    // End DOM method /drawState/
+
+    // Begin DOM method /drawTransition/
+    drawTransition = function(transition) {
+        transition.stroke(context);
+    }; // End DOM method /drawTransition/
+
+    drawTransitions = function(state) {
+        var i;
+        for (i = 0; i < state.transitions.length; i++) {
+            if (stateMap.states.indexOf(state.transitions[i].endState) >= 0) {
+                drawTransition(state.transitions[i]);
+            } else {
+                //clean up any dangling transitions
+                state.transitions.splice(i, 1);
+            }
+        }
+    };
+   
     drawHorizontalLine = function (y) {
         context.beginPath();
         context.lineWidth = 1;
@@ -1027,43 +1003,29 @@ fsm.graph = (function() {
 
     // Begin DOM method /resetCanvas/
     resetContext = function (hideGrid) {
-
-        //capture an image of the canvas and pubilsh it
-        if (!stateMap.dragging && !stateMap.isEditingText) {
-            captureCanvas();
-        }
-        var context = canvas.getContext('2d');
-
-
-        context.clearRect(0, 0, canvas.width / stateMap.zoomLevel, canvas.height / stateMap.zoomLevel);
-        if (!hideGrid) {
+        var currentTime = new Date().getTime();
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        if (!hideGrid){
             drawGrid(context, 'light gray', 10, 10);
         }
-        drawStates(context);
+        drawStates();
 
-
+        if (!stateMap.dragging) {
+            stateMap.img = jqueryMap.$graph[0].toDataURL();
+            $.gevent.publish('fsm-graph-updated', { img: stateMap.img });
+            stateMap.timeElapsed = currentTime;
+        }
+        //clear up image caches
+      
     }
     // End DOM method /resetCanvas/
 
-    // Begin DOM method /captureCanvas/
-    captureCanvas = function () {
-        var context = jqueryMap.$graphCopy[0].getContext('2d');
-
-        jqueryMap.$graphCopy[0].width = jqueryMap.$graphCopy[0].width;
-
-        drawStates(context);
-        stateMap.img = jqueryMap.$graphCopy[0].toDataURL();
-        $.gevent.publish('fsm-graph-updated', { img: stateMap.img });
-
-    };
-    // End DOM method /captureCanvas/
-
     // Begin DOM method /drawStates/
-    drawStates = function (context) {
+    drawStates = function () {
 
         stateMap.states.forEach(function (state) {
-            drawState(context, state);
-            drawTransitions(context, state);
+            drawState(state);
+            drawTransitions(state);
         });
 
 
@@ -1071,7 +1033,7 @@ fsm.graph = (function() {
     // End DOM method /drawStates/
 
     // Begin DOM method /drawState/
-    drawState = function (context, state) {
+    drawState = function (state) {
         context.beginPath();
         context.lineWidth = 5;
         state.createPath(context);
@@ -1079,16 +1041,16 @@ fsm.graph = (function() {
     };
     // End DOM method /drawState/
     // Begin DOM method /drawTransition/
-    drawTransition = function (context, transition) {
+    drawTransition = function (transition) {
         transition.stroke(context);
     }; 
     // End DOM method /drawTransition/
     // Begin DOM method /drawTransitions/
-    drawTransitions = function (context, state) {
+    drawTransitions = function (state) {
         var i;
         for (i = 0; i < state.transitions.length; i++) {
             if (stateMap.states.indexOf(state.transitions[i].endState) >= 0) {
-                drawTransition(context, state.transitions[i]);
+                drawTransition(state.transitions[i]);
             } else {
                 //clean up any dangling transitions
                 state.transitions.splice(i, 1);
@@ -1144,23 +1106,6 @@ fsm.graph = (function() {
         return false;
     }
     // End DOM method /findStateAtPosition/
-
-    // Begin DOM method /resizeCanvas/
-    resizeCanvas = function () {
-        //get width of canvas container
-        var c_width = jqueryMap.$graphContainer.width(),
-            c_height = jqueryMap.$graphContainer.height(),
-            g_width = jqueryMap.$graph.width(),
-            g_height = jqueryMap.$graph.height(),
-            width_percent = c_width / g_width,
-            height_percent = c_height / g_height;
-
-        //check to see if canvas is bigger than container
-        if (width_percent < 1 || height_percent < 1) {
-            $.gevent.publish('fsm-graph-resize', { width: width_percent, height: height_percent });
-        }
-    };
-    // End DOM method /resizeCanvas/
     //--------------------- END DOM METHODS ----------------------
 
     //------------------- BEGIN EVENT HANDLERS -------------------
@@ -1174,9 +1119,8 @@ fsm.graph = (function() {
 
     // Begin Event Hanlder /onDoubleClick/
     onDoubleClick = function (event) {
-        var state,
-            context = canvas.getContext('2d');
-
+        var state;
+        
         if (stateMap.selectedObject instanceof State) {
             stateMap.selectedObject.createPath(context);
             if (context.isPointInPath(loc.x, loc.y)) {
@@ -1193,7 +1137,7 @@ fsm.graph = (function() {
         state = new State(loc.x, loc.y);
         setSelectedObject(state);
        
-        drawState(context, state);
+        drawState(state);
         stateMap.states.push(state);
         resetContext();
         return true;
@@ -1223,8 +1167,8 @@ fsm.graph = (function() {
                 if (e.shiftKey) { // Netscape/Firefox/Opera
                     startDragging(loc);
                     stateMap.dragging = new Point(state.x, state.y);
-                    stateMap.draggingOffsetX = (loc.x - state.x);
-                    stateMap.draggingOffsetY = (loc.y - state.y);
+                    stateMap.draggingOffsetX = loc.x - state.x;
+                    stateMap.draggingOffsetY = loc.y - state.y;
                     return;
                 } else {
                     stateMap.dragging = state;
@@ -1237,10 +1181,14 @@ fsm.graph = (function() {
                     if (state.transitions[i].isPointInPath(loc.x, loc.y)) {
                         objClicked = true;
                         setSelectedObject(state.transitions[i]);
-                        stateMap.dragging = new Point(loc.x, loc.y);
+                    } if (state.transitions[i].controlPoint.isPointInPath(context, loc.x, loc.y)) {
+                        objClicked = true;
+                        setSelectedObject(state.transitions[i]);
+                        state.transitions[i].isControlPointSelected = true;
+                        stateMap.dragging = state.transitions[i].controlPoint;
                         stateMap.draggingOffsetX = 0;
                         stateMap.draggingOffsetY = 0;
-                    } 
+                    }
                 }
             }
         });
@@ -1268,10 +1216,15 @@ fsm.graph = (function() {
                     return;
                 }
             });
-        } 
+        } else if (stateMap.dragging instanceof Circle && stateMap.selectedObject instanceof Transition) {
+            if (stateMap.selectedObject.distanceToControlPoint < 15) {
+                stateMap.selectedObject.controlPoint.x = stateMap.selectedObject.center.x;
+                stateMap.selectedObject.controlPoint.y = stateMap.selectedObject.center.y;
+            }
+        }
         stateMap.dragging = false;
 
-        
+       
         resetContext();
 
     };
@@ -1285,12 +1238,10 @@ fsm.graph = (function() {
             resetContext();
         }
         if (stateMap.dragging) {
-            //set the x and y coordinates of the object we are dragging
-            //we modify by the offset as well as the current zoom level
-            stateMap.dragging.x = (loc.x - stateMap.draggingOffsetX);
-            stateMap.dragging.y = (loc.y - stateMap.draggingOffsetY);
-            if (stateMap.selectedObject instanceof Transition && stateMap.dragging instanceof Point) {
-                stateMap.selectedObject.modifyAnchorPoint(stateMap.dragging.x, stateMap.dragging.y);
+            stateMap.dragging.x = loc.x - stateMap.draggingOffsetX;
+            stateMap.dragging.y = loc.y - stateMap.draggingOffsetY;
+            if (stateMap.selectedObject instanceof Transition  && stateMap.dragging instanceof Circle) {
+                stateMap.selectedObject.modifyControlPoint(stateMap.dragging.x, stateMap.dragging.y);
             }
         
             resetContext();
@@ -1390,11 +1341,6 @@ fsm.graph = (function() {
     };
     // End Event Handler /onGraphPrint/
 
-    //Begin event handler /onScroll/
-    onScroll = function (e) {
-        $.gevent.publish('fsm-graph-scroll', { top_percent: $(this).scrollTop() / jqueryMap.$graph.height(), left_percent: $(this).scrollLeft() / jqueryMap.$graph.width() });
-    };
-    //End event handerl /onScroll/
     //-------------------- END EVENT HANDLERS --------------------
     //------------------- BEGIN PUBLIC METHODS -------------------
     // Begin Public method /initModule/
@@ -1403,31 +1349,20 @@ fsm.graph = (function() {
         stateMap.$container = $container;
         $container.html(configMap.main_html);
         setJqueryMap();
-        canvas = jqueryMap.$graph[0];
+        canvas = document.getElementById('fsm-graph');
         context = canvas.getContext('2d');
         cursor = new TextCursor();
         drawGrid(context, 'lightgray', 10, 10);
-        jqueryMap.$graph.attr({ width: settingsMap.width , height: settingsMap.height });
-        jqueryMap.$graph.css({ width: settingsMap.width, height: settingsMap.height });
-
-        jqueryMap.$graphCopy.attr({ width: settingsMap.width, height: settingsMap.height });
-        jqueryMap.$graphCopy.css({ width: settingsMap.width, height: settingsMap.height });
-
+        jqueryMap.$graph.attr({ width: jqueryMap.$container.width() * 0.98, height: jqueryMap.$container.height() * 0.96 });
+        jqueryMap.$graph.css({ width: jqueryMap.$container.width() * 0.98, height: jqueryMap.$container.height() * 0.96 });
         resetContext();
 
-        setTimeout(function () {
-            resizeCanvas();
-        },10);
-       
-
-        $(window)
-             .on('resize', function () {
-                 //jqueryMap.$graph.attr({ width: jqueryMap.$graphContainer.width(), height: jqueryMap.$graphContainer.height() });
-                 //jqueryMap.$graph.css({ width: jqueryMap.$graphContainer.width(), height: jqueryMap.$graphContainer.height() });
-                 //resetContext();
-                 
-                 resizeCanvas();
-             });
+       $(window)
+            .on('resize', function () {
+                jqueryMap.$graph.attr({ width: jqueryMap.$container.width() * 0.98, height: jqueryMap.$container.height() * 0.96 });
+                jqueryMap.$graph.css({ width: jqueryMap.$container.width() * 0.98, height: jqueryMap.$container.height() * 0.96 });
+                resetContext();
+            })
 
 
         jqueryMap.$graph
@@ -1436,51 +1371,6 @@ fsm.graph = (function() {
             .on('mousedown', onMouseDown)
             .on('mouseup', onMouseUp)
             .on('mousemove', onMouseMove);
-
-        jqueryMap.$graphContainer
-            .on('scroll', onScroll);
-
-
-        $.gevent.subscribe($('<div/>'), 'fsm-zoom-in', function (event) {
-
-            if (stateMap.zoomLevel < 3){
-                canvas.width = canvas.width;
-                context = canvas.getContext('2d');
-                stateMap.zoomLevel += 0.2;
-                jqueryMap.$graph.attr({ width: settingsMap.width * stateMap.zoomLevel, height: settingsMap.height * stateMap.zoomLevel });
-                jqueryMap.$graph.css({ width: settingsMap.width * stateMap.zoomLevel, height: settingsMap.height * stateMap.zoomLevel });
-                //context.translate(-((newWidth - canvas.width) / 2), -((newHeight - canvas.height) / 2));
-                context.scale(stateMap.zoomLevel, stateMap.zoomLevel);
-
-                resetContext();
-                //  context.restore();
-                resizeCanvas();
-                    //  $.gevent.publish('fsm-zoom', { zoom: stateMap.zoomLevel });
-            }
-        });
-        $.gevent.subscribe($('<div/>'), 'fsm-zoom-out', function (event) {
-            if (stateMap.zoomLevel > 1){
-                canvas.width = canvas.width;
-                stateMap.zoomLevel -= 0.2;
-                context = canvas.getContext('2d');
-                jqueryMap.$graph.attr({ width: settingsMap.width * stateMap.zoomLevel, height: settingsMap.height * stateMap.zoomLevel });
-                jqueryMap.$graph.css({ width: settingsMap.width * stateMap.zoomLevel, height: settingsMap.height * stateMap.zoomLevel });
-                //context.translate(-((newWidth - canvas.width) / 2), -((newHeight - canvas.height) / 2));
-                context.scale(stateMap.zoomLevel, stateMap.zoomLevel);
-
-                resetContext();
-                //  context.restore();
-                resizeCanvas();
-               // $.gevent.publish('fsm-zoom', { zoom: stateMap.zoomLevel });
-            }
-        });
-
-        $.gevent.subscribe($('<div/>'), 'fsm-nav-move', function (e, update_map) {
-            jqueryMap.$graphContainer
-                .scrollTop(update_map.y * jqueryMap.$graph.height())
-                .scrollLeft(update_map.x * jqueryMap.$graph.width());
-            
-        });
 
         $.gevent.subscribe($('<div/>'), 'fsm-new', function (event) {
             stateMap.states = [];
@@ -1591,9 +1481,7 @@ fsm.graph = (function() {
 
     return {
         initModule: initModule,
-        getStates: getStates,
-        Circle: Circle,
-        Point: Point
+        getStates: getStates
     };
     //------------------- END PUBLIC METHODS ---------------------
 }());

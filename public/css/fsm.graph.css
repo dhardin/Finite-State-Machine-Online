@@ -5,3 +5,13 @@
 #fsm-graph-img{
     display:block;
 }
+
+#fsm-graph-container {
+    overflow: auto;
+    height: 100%;
+    width: 100%;
+}
+
+#fsm-graph-copy{
+    display: none;
+}
