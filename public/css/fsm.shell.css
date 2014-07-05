@@ -162,4 +162,6 @@
     background-color: #ddd;
 }
 
-
+.delete-confirm {
+    display: none;
+}

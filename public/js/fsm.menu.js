@@ -95,6 +95,11 @@ fsm.menu = (function () {
                             + '</div>'
                         + '</div>'
                         + '<div class="modal-footer">'
+                             + '<button type="button" class="delete-btn btn btn-danger pull-left"><span class="sign-in glyphicon glyphicon-trash" style="padding-right: 10px;"></span>Delete</button>'
+                             + '<span class="delete-confirm pull-left">'
+                                + '<button type="button" class="btn btn-success"><span class="sign-in glyphicon glyphicon-ok" style="padding-right: 10px;"></span>Yes</button>'
+                                + '<button type="button" class="btn btn-danger"><span class="sign-in glyphicon glyphicon-remove" style="padding-right: 10px;"></span>No</button>'
+                             + '</span>'
                             + '<button type="button" class="close-modal-btn btn btn-default" data-dismiss="modal">Close</button>'
                             + '<button type="button" id="load-graph-btn" class="btn btn-primary">Load</button>'
                         + '</div>'
@@ -135,7 +140,7 @@ fsm.menu = (function () {
     jqueryMap = {},
     copyAnchorMap, setJqueryMap,
     onNewClick, onPrintClick, onLoadClick, onSaveClick, onAccountClick, onSignInClick, onSignOutClick, onLogin, onLogout, onLoad, onGraphsLoaded,
-    changeAnchorPart,
+    onDeleteClick, onDeleteYesClick, onDeleteNoClick, changeAnchorPart,
     initModule;
     //----------------- END MODULE SCOPE VARIABLES ---------------
     //-------------------- BEGIN UTILITY METHODS -----------------
@@ -157,7 +162,11 @@ fsm.menu = (function () {
             $acct: $container.find('.account'),
             $signIn: $container.find('.sign-in'),
             $signOut: $container.find('.sign-out'),
-            $user: $container.find('.user')
+            $user: $container.find('.user'),
+            $deleteConfirm: $container.find('.delete-confirm'),
+            $delete: $container.find('.delete-btn'),
+            $deleteYes: $container.find('.delete-yes-btn'),
+            $deletNo: $container.find('.delete-no-btn')
         };
     };
     // End DOM method /setJqueryMap/
@@ -335,6 +344,24 @@ fsm.menu = (function () {
     };
     // End Event Handelr /onPrintClick/
 
+
+    // Begin event handler /onDeleteClick/
+    onDeleteClick = function (e) {
+        jqueryMap.$deleteConfirm.show();
+    };
+    // End event handler /onDeleteClick/
+
+    // Begin event handler /onDeleteClick/
+    onDeleteYesClick = function (e) {
+        jqueryMap.$deleteConfirm.hide();
+    };
+    // End event handler /onDeleteClick/
+
+    // Begin event handler /onDeleteClick/
+    onDeleteNoClick = function (e) {
+        jqueryMap.$deleteConfirm.hide();
+    };
+    // End event handler /onDeleteClick/
     //-------------------- END EVENT HANDLERS --------------------
     //------------------- BEGIN PUBLIC METHODS -------------------
     // Begin Public method /initModule/
@@ -352,6 +379,9 @@ fsm.menu = (function () {
         jqueryMap.$acct.on('click', onAccountClick);
         jqueryMap.$signIn.on('click', onSignInClick);
         jqueryMap.$signOut.on('click', onSignOutClick);
+        jqueryMap.$delete.on('click', onDeleteClick);
+        jqueryMap.$deleteYes.on('click', onDeleteYesClick);
+        jqueryMap.$deletNo.on('click', onDeleteNoClick);
 
         $.gevent.subscribe(jqueryMap.$user, 'fsm-login', onLogin);
         $.gevent.subscribe(jqueryMap.$container, 'fsm-logout', onLogout);
