@@ -456,7 +456,7 @@ fsm.graph = (function() {
             context.restore();
         },
         drawText: function (context) {
-            var line = new TextLine(this.center.x, this.center.y);
+            var line = new TextLine(this.circle.x, this.circle.y);
             line.text = this.isEditingText ? "" : this.text;
             line.draw(context);
         },
@@ -477,11 +477,30 @@ fsm.graph = (function() {
                 //    this.drawArcedArrow(this.circle.x, this.circle.y, this.circle.radius, startAngle, endAngle, false, false, 10);
                 //} 
                 if (this.isArched) {
-                    var startAngle = Math.atan2(this.startState.y - this.circle.y, this.startState.x - this.circle.x);
-                    var endAngle = Math.atan2(this.endState.y - this.circle.y, this.endState.x - this.circle.x);
-                    var counterclcokwise = this.startState.y < this.controlPoint.y ? false : true;
-           
-                    this.drawArcedArrow(context, this.circle.x, this.circle.y, this.circle.radius, startAngle, endAngle, counterclcokwise, false, 10);
+                    var angle1 = Math.atan2(this.startState.y - this.circle.y, this.startState.x - this.circle.x);
+                    var angle2 = Math.atan2(this.endState.y - this.circle.y, this.endState.x - this.circle.x);
+                    var middleAngle = Math.atan2(this.anchorPoint.y - this.circle.y, this.anchorPoint.x - this.circle.x);
+                    var counterClockwise = this.startState.y < this.controlPoint.y ? false : true;
+                    var startAngle, endAngle;
+
+
+                    if (this.anchorPoint.x < this.circle.x || this.anchorPoint.y < this.circle.y) {
+                        startAngle = angle1;
+                        endAngle = angle2;
+                    } else {
+                        startAngle = angle2;
+                        endAngle = angle1;
+                    }
+                   
+                    context.save();
+                    //context.strokeStyle = this.strokeStyle;
+                    //context.lineWidth = this.lineWidth;
+                    context.beginPath();
+                    context.arc(this.circle.x, this.circle.y, this.circle.radius, startAngle, endAngle);
+                    //context.arc(this.circle.x, this.circle.y, this.circle.radius, middleAngle, endAngle);
+                    context.stroke();
+                    context.restore();
+                   // this.drawArcedArrow(context, this.circle.x, this.circle.y, this.circle.radius, startAngle, endAngle, counterclcokwise, false, 10);
                 } else {
                     this.drawArrow(context, this.modStartPoint.x, this.modStartPoint.y, this.modEndPoint.x, this.modEndPoint.y, this.angle);
                 }
