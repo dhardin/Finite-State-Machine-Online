@@ -484,7 +484,7 @@ fsm.graph = (function() {
                     var startAngle, endAngle;
 
 
-                    if (this.anchorPoint.x < this.circle.x || this.anchorPoint.y < this.circle.y) {
+                    if (this.anchorPoint.x < this.circle.x || this.anchorPoint.y < this.circle.y){
                         startAngle = angle1;
                         endAngle = angle2;
                     } else {
