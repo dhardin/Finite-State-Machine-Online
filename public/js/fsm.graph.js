@@ -90,7 +90,8 @@ fsm.graph = (function() {
         drawNormalLine, drawIntersectionPoint, getDistance, findStateAtPosition, Circle,
         Shape, Point, Polygon, State, Transition, TextLine, TextCursor, Vector, onClick,
         onDoubleClick, onMouseDown, onMouseUp, onMouseMove, onInputChange, onGraphLoad, onScroll,
-        onGraphPrint, initModule, getStates, captureCanvas, resizeCanvas;
+        onGraphPrint, onKeyDown, onKeyPress, onZoomOut, onZoomIn,
+        initModule, getStates, captureCanvas, resizeCanvas;
     //----------------- END MODULE SCOPE VARIABLES ---------------
 
     //----------------- BEGIN OBJECT CONSTRUCTORS ----------------
@@ -360,7 +361,8 @@ fsm.graph = (function() {
              //   this.distanceToIntersection = distanceToIntersection1 < distanceToIntersection2 ? distanceToIntersection1 : distanceToIntersection2;
 
               //  var intersection = 
-
+                this.anchorPoint.x = intersection.x;
+                this.anchorPoint.y = intersection.y;
                 this.circle = fsm.math_util.circleFrom3Points(this.startState.x, this.startState.y, this.endState.x, this.endState.y, intersection.x, intersection.y);
             }
         },
@@ -456,7 +458,7 @@ fsm.graph = (function() {
             context.restore();
         },
         drawText: function (context) {
-            var line = new TextLine(this.circle.x, this.circle.y);
+            var line = (this.isArched ? new TextLine(this.anchorPoint.x, this.anchorPoint.y) : new TextLine(this.center.x, this.center.y));
             line.text = this.isEditingText ? "" : this.text;
             line.draw(context);
         },
@@ -1049,7 +1051,7 @@ fsm.graph = (function() {
 
         //capture an image of the canvas and pubilsh it
         if (!stateMap.dragging && !stateMap.isEditingText) {
-            captureCanvas();
+       //     captureCanvas();
         }
         var context = canvas.getContext('2d');
 
@@ -1214,7 +1216,12 @@ fsm.graph = (function() {
        
         drawState(context, state);
         stateMap.states.push(state);
+      
         resetContext();
+        setTimeout(function () {
+            captureCanvas();
+        }, 10);
+  
         return true;
     };
     // End Event Handler /onDoubleClick/
@@ -1287,12 +1294,19 @@ fsm.graph = (function() {
                     return;
                 }
             });
-        } 
-        stateMap.dragging = false;
+  
+        }
+
+       
 
         
         resetContext();
-
+        if (stateMap.dragging) {
+            setTimeout(function () {
+                captureCanvas();
+            }, 10);
+        }
+        stateMap.dragging = false;
     };
     // End Event Handler /onMouseUp
 
@@ -1414,6 +1428,127 @@ fsm.graph = (function() {
         $.gevent.publish('fsm-graph-scroll', { top_percent: $(this).scrollTop() / jqueryMap.$graph.height(), left_percent: $(this).scrollLeft() / jqueryMap.$graph.width() });
     };
     //End event handerl /onScroll/
+
+    // Begin event handler /onKeyDown/
+    onKeyDown = function (e) {
+        var delReturnVal;
+        if (!stateMap.hasFocus) {
+            return;
+        }
+           
+        if (e.keyCode === 8 || e.keyCode === 13) {
+            // The call to e.preventDefault() suppresses the browser's
+            // subsequent call to document.onkeypress(), so
+            // only suppress that call for Backspace and Enter.
+            e.preventDefault();
+        }
+        if (stateMap.selectedObject == null) {
+            return false;
+        }
+        if (e.keyCode === 8) { // Backspace
+            if (!stateMap.isEditingText) {
+                stateMap.isEditingText = true;
+                fontHeight = context.measureText('W').width;
+                fontHeight += fontHeight / 6;
+                stateMap.selectedObject.isEditingText = true;
+                line = new TextLine(stateMap.selectedObject.center.x, stateMap.selectedObject.center.y);
+                line.insert(stateMap.selectedObject.text);
+                moveCursor(line.left + line.getWidth(context) * 0.6, line.bottom + line.getHeight(context) *0.5);
+                        
+            }
+            resetContext();
+            context.save();
+                    
+            line.removeCharacterBeforeCaret();
+            moveCursor(line.left + line.getWidth(context) * 0.6, line.bottom + line.getHeight(context) * 0.5);
+            line.erase(context, stateMap.drawingSurfaceImageData);
+            line.draw(context);
+                   
+            context.restore();
+                    
+                    
+        } else if (e.keyCode === 46) { // Delete 
+            delReturnVal = deleteObject(stateMap.selectedObject);
+            if (delReturnVal) {
+                stateMap.selectedTransition = null;
+                resetContext();
+            }
+        }
+    };
+    // End event handler /onKeyDown/
+
+    // Begin event handler /onKeyPress/
+    onKeyPress = function (e) {
+        if (!stateMap.hasFocus) {
+            return;
+        }
+        var key = String.fromCharCode(e.which),
+            keyReplace;
+        if (stateMap.selectedObject == null) {
+            return false;
+        }
+        if (!stateMap.isEditingText) {
+            stateMap.isEditingText = true;
+            fontHeight = context.measureText('W').width;
+            fontHeight += fontHeight / 6;
+            stateMap.selectedObject.isEditingText = true;
+            line = new TextLine(stateMap.selectedObject.center.x, stateMap.selectedObject.center.y);
+            line.insert(stateMap.selectedObject.text);
+            moveCursor(line.left + line.getWidth(context) * 0.6, line.bottom + line.getHeight(context) * 0.5);
+        }
+        if (e.keyCode !== 8 && !e.ctrlKey && !e.metaKey) {
+            resetContext();
+            e.preventDefault(); // No further browser processing
+            context.save();
+            line.insert(key);
+            keyReplace = onInputChange(e, line.text);
+            line.replace(keyReplace);
+            stateMap.selectedObject.text = line.text;
+            moveCursor(line.left + line.getWidth(context) * 0.6, line.bottom + line.getHeight(context) * 0.5);
+            line.draw(context);
+            context.restore();
+        }
+    };
+    // End event handler /onKeyPress/
+
+    // Begin event handler /onZoomOut/
+    onZOomOut = function (event) {
+        if (stateMap.zoomLevel > 1) {
+            canvas.width = canvas.width;
+            stateMap.zoomLevel -= 0.2;
+            context = canvas.getContext('2d');
+            jqueryMap.$graph.attr({ width: settingsMap.width * stateMap.zoomLevel, height: settingsMap.height * stateMap.zoomLevel });
+            jqueryMap.$graph.css({ width: settingsMap.width * stateMap.zoomLevel, height: settingsMap.height * stateMap.zoomLevel });
+            //context.translate(-((newWidth - canvas.width) / 2), -((newHeight - canvas.height) / 2));
+            context.scale(stateMap.zoomLevel, stateMap.zoomLevel);
+
+            resetContext();
+            //  context.restore();
+            resizeCanvas();
+            // $.gevent.publish('fsm-zoom', { zoom: stateMap.zoomLevel });
+        }
+    };
+    // End event handler /onZoomOut/
+
+    // Begin event handler /onZoomIn/
+    onZoomIn = function (event) {
+
+        if (stateMap.zoomLevel < 3) {
+            canvas.width = canvas.width;
+            context = canvas.getContext('2d');
+            stateMap.zoomLevel += 0.2;
+            jqueryMap.$graph.attr({ width: settingsMap.width * stateMap.zoomLevel, height: settingsMap.height * stateMap.zoomLevel });
+            jqueryMap.$graph.css({ width: settingsMap.width * stateMap.zoomLevel, height: settingsMap.height * stateMap.zoomLevel });
+            //context.translate(-((newWidth - canvas.width) / 2), -((newHeight - canvas.height) / 2));
+            context.scale(stateMap.zoomLevel, stateMap.zoomLevel);
+
+            resetContext();
+            //  context.restore();
+            resizeCanvas();
+            //  $.gevent.publish('fsm-zoom', { zoom: stateMap.zoomLevel });
+        }
+    };
+    // End evet handler /onZoomIn/
     //-------------------- END EVENT HANDLERS --------------------
     //------------------- BEGIN PUBLIC METHODS -------------------
     // Begin Public method /initModule/
@@ -1460,39 +1595,8 @@ fsm.graph = (function() {
             .on('scroll', onScroll);
 
 
-        $.gevent.subscribe($('<div/>'), 'fsm-zoom-in', function (event) {
-
-            if (stateMap.zoomLevel < 3){
-                canvas.width = canvas.width;
-                context = canvas.getContext('2d');
-                stateMap.zoomLevel += 0.2;
-                jqueryMap.$graph.attr({ width: settingsMap.width * stateMap.zoomLevel, height: settingsMap.height * stateMap.zoomLevel });
-                jqueryMap.$graph.css({ width: settingsMap.width * stateMap.zoomLevel, height: settingsMap.height * stateMap.zoomLevel });
-                //context.translate(-((newWidth - canvas.width) / 2), -((newHeight - canvas.height) / 2));
-                context.scale(stateMap.zoomLevel, stateMap.zoomLevel);
-
-                resetContext();
-                //  context.restore();
-                resizeCanvas();
-                    //  $.gevent.publish('fsm-zoom', { zoom: stateMap.zoomLevel });
-            }
-        });
-        $.gevent.subscribe($('<div/>'), 'fsm-zoom-out', function (event) {
-            if (stateMap.zoomLevel > 1){
-                canvas.width = canvas.width;
-                stateMap.zoomLevel -= 0.2;
-                context = canvas.getContext('2d');
-                jqueryMap.$graph.attr({ width: settingsMap.width * stateMap.zoomLevel, height: settingsMap.height * stateMap.zoomLevel });
-                jqueryMap.$graph.css({ width: settingsMap.width * stateMap.zoomLevel, height: settingsMap.height * stateMap.zoomLevel });
-                //context.translate(-((newWidth - canvas.width) / 2), -((newHeight - canvas.height) / 2));
-                context.scale(stateMap.zoomLevel, stateMap.zoomLevel);
-
-                resetContext();
-                //  context.restore();
-                resizeCanvas();
-               // $.gevent.publish('fsm-zoom', { zoom: stateMap.zoomLevel });
-            }
-        });
+        $.gevent.subscribe($('<div/>'), 'fsm-zoom-in', onZoomIn);
+        $.gevent.subscribe($('<div/>'), 'fsm-zoom-out', onZoomOut);
 
         $.gevent.subscribe($('<div/>'), 'fsm-nav-move', function (e, update_map) {
             jqueryMap.$graphContainer
@@ -1520,83 +1624,9 @@ fsm.graph = (function() {
             stateMap.hasFocus = false;
         });
 
-        $(document).on('keydown', function (e) {
-            var delReturnVal;
-            if (!stateMap.hasFocus) {
-                return;
-            }
-           
-            if (e.keyCode === 8 || e.keyCode === 13) {
-                // The call to e.preventDefault() suppresses the browser's
-                // subsequent call to document.onkeypress(), so
-                // only suppress that call for Backspace and Enter.
-                e.preventDefault();
-            }
-            if (stateMap.selectedObject == null) {
-                return false;
-            }
-            if (e.keyCode === 8) { // Backspace
-                if (!stateMap.isEditingText) {
-                    stateMap.isEditingText = true;
-                    fontHeight = context.measureText('W').width;
-                    fontHeight += fontHeight / 6;
-                    stateMap.selectedObject.isEditingText = true;
-                    line = new TextLine(stateMap.selectedObject.center.x, stateMap.selectedObject.center.y);
-                    line.insert(stateMap.selectedObject.text);
-                    moveCursor(line.left + line.getWidth(context) * 0.6, line.bottom + line.getHeight(context) *0.5);
-                        
-                }
-                resetContext();
-                context.save();
-                    
-                line.removeCharacterBeforeCaret();
-                moveCursor(line.left + line.getWidth(context) * 0.6, line.bottom + line.getHeight(context) * 0.5);
-                line.erase(context, stateMap.drawingSurfaceImageData);
-                line.draw(context);
-                   
-                context.restore();
-                    
-                    
-            } else if (e.keyCode === 46) { // Delete 
-                delReturnVal = deleteObject(stateMap.selectedObject);
-                if (delReturnVal) {
-                    stateMap.selectedTransition = null;
-                    resetContext();
-                }
-            }
-        });
+        $(document).on('keydown', onKeyDown);
 
-        $(document).on('keypress', function (e) {
-                if (!stateMap.hasFocus) {
-                    return;
-                }
-                var key = String.fromCharCode(e.which),
-                    keyReplace;
-                if (stateMap.selectedObject == null) {
-                    return false;
-                }
-                if (!stateMap.isEditingText) {
-                        stateMap.isEditingText = true;
-                        fontHeight = context.measureText('W').width;
-                        fontHeight += fontHeight / 6;
-                        stateMap.selectedObject.isEditingText = true;
-                        line = new TextLine(stateMap.selectedObject.center.x, stateMap.selectedObject.center.y);
-                        line.insert(stateMap.selectedObject.text);
-                        moveCursor(line.left + line.getWidth(context) * 0.6, line.bottom + line.getHeight(context) * 0.5);
-                } 
-                if (e.keyCode !== 8 && !e.ctrlKey && !e.metaKey) {
-                    resetContext();
-                    e.preventDefault(); // No further browser processing
-                    context.save();
-                    line.insert(key);
-                    keyReplace = onInputChange(e, line.text);
-                    line.replace(keyReplace);
-                    stateMap.selectedObject.text = line.text;
-                    moveCursor(line.left + line.getWidth(context) * 0.6, line.bottom + line.getHeight(context) * 0.5);
-                    line.draw(context);
-                    context.restore();
-                }
-            });
+        $(document).on('keypress', onKeyPress);
 
 
     };
