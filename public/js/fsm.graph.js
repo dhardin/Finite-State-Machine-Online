@@ -90,7 +90,7 @@ fsm.graph = (function() {
         drawNormalLine, drawIntersectionPoint, getDistance, findStateAtPosition, Circle,
         Shape, Point, Polygon, State, Transition, TextLine, TextCursor, Vector, onClick,
         onDoubleClick, onMouseDown, onMouseUp, onMouseMove, onInputChange, onGraphLoad, onScroll,
-        onGraphPrint, onKeyDown, onKeyPress, onZoomOut, onZoomIn,
+        onGraphPrint, onKeyDown, onKeyPress, onZoomOut, onZoomIn, onExport,
         initModule, getStates, captureCanvas, resizeCanvas;
     //----------------- END MODULE SCOPE VARIABLES ---------------
 
@@ -1549,6 +1549,27 @@ fsm.graph = (function() {
         }
     };
     // End evet handler /onZoomIn/
+
+    // Begin event hander /onExport/
+    onExport = function (e) {
+        var states = {}, statesString, state, transition, i, j, w;
+
+        //build states object
+        for (i = 0; i < stateMap.states.length; i++) {
+            state = stateMap.states[i];
+            states[state.text] = {};
+            for (j = 0; j < state.transitions.length; j++) {
+                transition = state.transitions[j];
+                states[state.text][transition.text] = transition.endState.text;
+            }
+        }
+        //stringify object
+        statesString = JSON.stringify(states, undefined, 4);
+
+        $.gevent.publish('fsm-export-return', { content: statesString });
+    };
+    // End event handler /onExport/
+
     //-------------------- END EVENT HANDLERS --------------------
     //------------------- BEGIN PUBLIC METHODS -------------------
     // Begin Public method /initModule/
@@ -1597,6 +1618,7 @@ fsm.graph = (function() {
 
         $.gevent.subscribe($('<div/>'), 'fsm-zoom-in', onZoomIn);
         $.gevent.subscribe($('<div/>'), 'fsm-zoom-out', onZoomOut);
+        $.gevent.subscribe($('<div/>'), 'fsm-export', onExport);
 
         $.gevent.subscribe($('<div/>'), 'fsm-nav-move', function (e, update_map) {
             jqueryMap.$graphContainer

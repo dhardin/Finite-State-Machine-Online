@@ -15,7 +15,7 @@ fsm.menu = (function () {
     configMap = {
         anchor_schema_map: {
         },
-        main_html : String()
+        main_html: String()
            + '<nav class="navbar navbar-default" role="navigation">'
             + '<div class="container-fluid">'
                 + '<div class="navbar-header">'
@@ -66,7 +66,7 @@ fsm.menu = (function () {
                             + '<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>'
                             + '<h4 class="modal-title">Finite State Machine</h4>'
                         + '</div>'
-                        
+
                         + '<div class="modal-body">'
                             + '<form role="form">'
                                 + '<div class="form-group">'
@@ -95,7 +95,7 @@ fsm.menu = (function () {
                         + '</div>'
                         + '<div class="modal-body">'
                             + '<div class="graph-list list-group">'
-                             
+
                             + '</div>'
                         + '</div>'
                         + '<div class="modal-footer">'
@@ -133,6 +133,32 @@ fsm.menu = (function () {
                         + '</div>'
                     + '</div><!-- /.modal-content -->'
                 + '</div><!-- /.modal-dialog -->'
+            + '</div><!-- /.modal -->',
+
+        export_html: String()
+         + '<div id="export-modal" class="modal fade">'
+                + '<div class="modal-dialog">'
+                    + '<div class="modal-content">'
+                        + '<div class="modal-header">'
+                            + '<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>'
+                            + '<h4 class="modal-title">Finite State Machine</h4>'
+                        + '</div>'
+
+                        + '<div class="modal-body">'
+                            + '<form role="form">'
+                                + '<div class="panel panel-success">'
+                                    + '<div class="panel-heading">'
+                                        + '<h3 class="panel-title">Export: JSON</h3>'
+                                    + '</div>'
+                                  + '<div class="panel-body" style="height: 300px; overflow: auto;"></div>'
+                                + '</div>'
+                            + '</form>'
+                        + '</div>'
+                        + '<div class="modal-footer">'
+                            + '<button type="button" class="close-modal-btn btn btn-default" data-dismiss="modal">Close</button>'
+                        + '</div>'
+                    + '</div><!-- /.modal-content -->'
+                + '</div><!-- /.modal-dialog -->'
             + '</div><!-- /.modal -->'
     },
     stateMap = {
@@ -144,7 +170,7 @@ fsm.menu = (function () {
     jqueryMap = {},
     copyAnchorMap, setJqueryMap,
     onNewClick, onPrintClick, onLoadClick, onSaveClick, onAccountClick, onSignInClick, onSignOutClick, onLogin, onLogout, onLoad, onGraphsLoaded,
-    onDeleteClick, onDeleteYesClick, onDeleteNoClick, changeAnchorPart,
+    onDeleteClick, onDeleteYesClick, onDeleteNoClick, onExportClick, onExportReturn, changeAnchorPart,
     initModule;
     //----------------- END MODULE SCOPE VARIABLES ---------------
     //-------------------- BEGIN UTILITY METHODS -----------------
@@ -163,6 +189,7 @@ fsm.menu = (function () {
             $print: $container.find('.print'),
             $save: $container.find('.save'),
             $load: $container.find('.load'),
+            $export : $container.find('.export'),
             $acct: $container.find('.account'),
             $signIn: $container.find('.sign-in'),
             $signOut: $container.find('.sign-out'),
@@ -238,6 +265,25 @@ fsm.menu = (function () {
         return bool_return;
     };
     // End DOM method /changeAnchorPart/
+
+    function syntaxHighlight(json) {
+        json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+            var cls = 'number';
+            if (/^"/.test(match)) {
+                if (/:$/.test(match)) {
+                    cls = 'key';
+                } else {
+                    cls = 'string';
+                }
+            } else if (/true|false/.test(match)) {
+                cls = 'boolean';
+            } else if (/null/.test(match)) {
+                cls = 'null';
+            }
+            return '<span class="' + cls + '">' + match + '</span>';
+        });
+    }
 
     //--------------------- END DOM METHODS ----------------------
 
@@ -366,6 +412,29 @@ fsm.menu = (function () {
         jqueryMap.$deleteConfirm.hide();
     };
     // End event handler /onDeleteClick/
+
+    // Begin event handler /onExportClick/
+    onExportClick = function (e) {
+        $.gevent.publish('fsm-export', {});
+    };
+    // End Event handler /onExportClick/
+
+    // Begin event handler /onExportReturn/
+    onExportReturn = function (e, update_map) {
+        var content = update_map.content,
+            $content = $('<pre></pre>'),
+            $target;
+        
+        $(configMap.export_html).appendTo('body').modal();
+        $target = $("#export-modal").find('.panel-body');
+
+        $content.html(syntaxHighlight(content));
+
+        $content.appendTo($target);
+      
+    };
+    // End event handler /onExportReturn/
+
     //-------------------- END EVENT HANDLERS --------------------
     //------------------- BEGIN PUBLIC METHODS -------------------
     // Begin Public method /initModule/
@@ -386,7 +455,9 @@ fsm.menu = (function () {
         jqueryMap.$delete.on('click', onDeleteClick);
         jqueryMap.$deleteYes.on('click', onDeleteYesClick);
         jqueryMap.$deletNo.on('click', onDeleteNoClick);
+        jqueryMap.$export.on('click', onExportClick);
 
+        $.gevent.subscribe($('<div/>'), 'fsm-export-return', onExportReturn);
         $.gevent.subscribe(jqueryMap.$user, 'fsm-login', onLogin);
         $.gevent.subscribe(jqueryMap.$container, 'fsm-logout', onLogout);
         $.gevent.subscribe($('<div/>'), 'fsm-load-complete', function (e) {
@@ -452,6 +523,11 @@ fsm.menu = (function () {
             $('.modal-backdrop').remove();
         });
 
+        $(document).on('hidden.bs.modal', "#export-modal", function (e) {
+            $('#export-modal').remove();
+            $('body').removeClass('modal-open');
+            $('.modal-backdrop').remove();
+        });
     };
     // End PUBLIC method /initModule/
     return {
