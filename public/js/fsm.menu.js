@@ -159,7 +159,33 @@ fsm.menu = (function () {
                         + '</div>'
                     + '</div><!-- /.modal-content -->'
                 + '</div><!-- /.modal-dialog -->'
-            + '</div><!-- /.modal -->'
+            + '</div><!-- /.modal -->',
+
+        print_html: String()
+     + '<div id="print-modal" class="modal fade">'
+            + '<div class="modal-dialog">'
+                + '<div class="modal-content">'
+                    + '<div class="modal-header">'
+                        + '<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>'
+                        + '<h4 class="modal-title">Finite State Machine</h4>'
+                    + '</div>'
+
+                    + '<div class="modal-body">'
+                        + '<form role="form">'
+                            + '<div class="panel panel-success">'
+                                + '<div class="panel-heading">'
+                                    + '<h3 class="panel-title">Print</h3>'
+                                + '</div>'
+                              + '<div class="panel-body" style="overflow: auto;"></div>'
+                            + '</div>'
+                        + '</form>'
+                    + '</div>'
+                    + '<div class="modal-footer">'
+                        + '<button type="button" class="close-modal-btn btn btn-default" data-dismiss="modal">Close</button>'
+                    + '</div>'
+                + '</div><!-- /.modal-content -->'
+            + '</div><!-- /.modal-dialog -->'
+        + '</div><!-- /.modal -->'
     },
     stateMap = {
         $container: null,
@@ -169,7 +195,7 @@ fsm.menu = (function () {
     },
     jqueryMap = {},
     copyAnchorMap, setJqueryMap,
-    onNewClick, onPrintClick, onLoadClick, onSaveClick, onAccountClick, onSignInClick, onSignOutClick, onLogin, onLogout, onLoad, onGraphsLoaded,
+    onNewClick, onPrintClick, onPrintReturn, onLoadClick, onSaveClick, onAccountClick, onSignInClick, onSignOutClick, onLogin, onLogout, onLoad, onGraphsLoaded,
     onDeleteClick, onDeleteYesClick, onDeleteNoClick, onExportClick, onExportReturn, changeAnchorPart,
     initModule;
     //----------------- END MODULE SCOPE VARIABLES ---------------
@@ -393,7 +419,19 @@ fsm.menu = (function () {
         $.gevent.publish('fsm-print', {});
     };
     // End Event Handelr /onPrintClick/
+    
+    //Begin event handler /onPrintReturn/
+    onPrintReturn = function (e, update_map) {
+        var image = update_map.content;
 
+
+        $(configMap.print_html).appendTo('body').modal();
+        $target = $("#print-modal").find('.panel-body');
+
+        $(image).appendTo($target);
+
+    };
+    //End Event handler /onPrintReturn/
 
     // Begin event handler /onDeleteClick/
     onDeleteClick = function (e) {
@@ -457,6 +495,7 @@ fsm.menu = (function () {
         jqueryMap.$deletNo.on('click', onDeleteNoClick);
         jqueryMap.$export.on('click', onExportClick);
 
+        $.gevent.subscribe($('<div/>'), 'fsm-print-return', onPrintReturn);
         $.gevent.subscribe($('<div/>'), 'fsm-export-return', onExportReturn);
         $.gevent.subscribe(jqueryMap.$user, 'fsm-login', onLogin);
         $.gevent.subscribe(jqueryMap.$container, 'fsm-logout', onLogout);
@@ -525,6 +564,13 @@ fsm.menu = (function () {
 
         $(document).on('hidden.bs.modal', "#export-modal", function (e) {
             $('#export-modal').remove();
+            $('body').removeClass('modal-open');
+            $('.modal-backdrop').remove();
+        });
+
+
+        $(document).on('hidden.bs.modal', "#print-modal", function (e) {
+            $('#print-modal').remove();
             $('body').removeClass('modal-open');
             $('.modal-backdrop').remove();
         });

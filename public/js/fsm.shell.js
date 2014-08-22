@@ -207,11 +207,12 @@ fsm.shell = (function () {
 
 
         bindNav();
-        onNavMove();
+        onNavMove(e);
 
 
     }
-    onNavMove = function () {
+    onNavMove = function (e) {
+        e.stopPropagation();
         var $nav_drag =jqueryMap.$nav_drag,
             $nav_container = jqueryMap.$nav_container,
             nav_drag_position = { left: (parseInt($nav_drag.css('left'), 10) ) / $nav_container.width(), top: (parseInt($nav_drag.css('top'), 10) ) / $nav_container.height() };

@@ -67,7 +67,8 @@ fsm.graph = (function() {
             graph: null,
             img: null,
             timeElapsed: 0,
-            zoomLevel: 1
+            zoomLevel: 1,
+            navMoved: false
         },
         jqueryMap = {},
         patternMap = {
@@ -479,20 +480,43 @@ fsm.graph = (function() {
                 //    this.drawArcedArrow(this.circle.x, this.circle.y, this.circle.radius, startAngle, endAngle, false, false, 10);
                 //} 
                 if (this.isArched) {
-                    var angle1 = Math.atan2(this.startState.y - this.circle.y, this.startState.x - this.circle.x);
-                    var angle2 = Math.atan2(this.endState.y - this.circle.y, this.endState.x - this.circle.x);
+                    var startAngle = Math.atan2(this.startState.y - this.circle.y, this.startState.x - this.circle.x);
+                    var endAngle = Math.atan2(this.endState.y - this.circle.y, this.endState.x - this.circle.x);
                     var middleAngle = Math.atan2(this.anchorPoint.y - this.circle.y, this.anchorPoint.x - this.circle.x);
                     var counterClockwise = this.startState.y < this.controlPoint.y ? false : true;
                     var startAngle, endAngle;
 
 
-                    if (this.anchorPoint.x < this.circle.x || this.anchorPoint.y < this.circle.y){
-                        startAngle = angle1;
-                        endAngle = angle2;
+                    if (endAngle - startAngle == Math.PI * 2) {
+                       // this._texData += '\\draw [' + this.strokeStyle + '] (' + fixed(x, 3) + ',' + fixed(-y, 3) + ') circle (' + fixed(radius, 3) + ');\n';
                     } else {
-                        startAngle = angle2;
-                        endAngle = angle1;
+                        if (this.anchorPoint.x == Math.min(this.startState.x, this.endState.x, this.anchorPoint.x)){//isReversed) {
+                            var temp = startAngle;
+                            startAngle = endAngle;
+                            endAngle = temp;
+                        }
+                        if (endAngle < startAngle) {
+                            endAngle += Math.PI * 2;
+                        }
+                        // TikZ needs the angles to be in between -2pi and 2pi or it breaks
+                        if (Math.min(startAngle, endAngle) < -2 * Math.PI) {
+                            startAngle += 2 * Math.PI;
+                            endAngle += 2 * Math.PI;
+                        } else if (Math.max(startAngle, endAngle) > 2 * Math.PI) {
+                            startAngle -= 2 * Math.PI;
+                            endAngle -= 2 * Math.PI;
+                        }
+                        startAngle = -startAngle;
+                        endAngle = -endAngle;
                     }
+
+                    //if (this.anchorPoint.x < this.circle.x || this.anchorPoint.y < this.circle.y){
+                    //    startAngle = angle1;
+                    //    endAngle = angle2;
+                    //} else {
+                    //    startAngle = angle2;
+                    //    endAngle = angle1;
+                    //}
                    
                     context.save();
                     //context.strokeStyle = this.strokeStyle;
@@ -509,7 +533,7 @@ fsm.graph = (function() {
               
               //  
             } else {
-                this.drawArcedArrow(this.selfState.x, this.selfState.y, this.selfState.radius, 7 * Math.PI / 6, 5* Math.PI/6, false, false, 10);
+                this.drawArcedArrow(context, this.selfState.x, this.selfState.y, this.selfState.radius, 7 * Math.PI / 6, 5* Math.PI/6, false, false, 10);
             }
         //    this.drawControlPoint(context);
             this.drawText(context);
@@ -1415,17 +1439,23 @@ fsm.graph = (function() {
         var img = jqueryMap.$graph[0].toDataURL();
         resetContext();
         jqueryMap.$graphImg.attr('src', img);
-        var w = window.open();
+        //var w = window.open();
         var html = $(jqueryMap.$printGraph).html();
+
+        $.gevent.publish('fsm-print-return', { content: html });
         // how do I write the html to the new window with JQuery?
-        $(w.document.body).html(html);
-        w.print();
+        //$(w.document.body).html(html);
+        //w.print();
     };
     // End Event Handler /onGraphPrint/
 
     //Begin event handler /onScroll/
     onScroll = function (e) {
-        $.gevent.publish('fsm-graph-scroll', { top_percent: $(this).scrollTop() / jqueryMap.$graph.height(), left_percent: $(this).scrollLeft() / jqueryMap.$graph.width() });
+        if (stateMap.navMoved) {
+            stateMap.navMoved = false;
+        } else {
+            $.gevent.publish('fsm-graph-scroll', { top_percent: $(this).scrollTop() / jqueryMap.$graph.height(), left_percent: $(this).scrollLeft() / jqueryMap.$graph.width() });
+        }
     };
     //End event handerl /onScroll/
 
@@ -1512,7 +1542,7 @@ fsm.graph = (function() {
     // End event handler /onKeyPress/
 
     // Begin event handler /onZoomOut/
-    onZOomOut = function (event) {
+    onZoomOut = function (event) {
         if (stateMap.zoomLevel > 1) {
             canvas.width = canvas.width;
             stateMap.zoomLevel -= 0.2;
@@ -1624,6 +1654,7 @@ fsm.graph = (function() {
             jqueryMap.$graphContainer
                 .scrollTop(update_map.y * jqueryMap.$graph.height())
                 .scrollLeft(update_map.x * jqueryMap.$graph.width());
+            stateMap.navMoved = true;
             
         });
 
